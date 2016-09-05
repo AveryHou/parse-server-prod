@@ -19,7 +19,7 @@
     },
     "SERVER_URL": {
       "description": "HB Heroku",
-      "value": "http://hbstage.herokuapp.com/parse"
+      "value": "http://hbstage.herokuapp.com/parse/"
     }
   },
   "image": "heroku/nodejs",
