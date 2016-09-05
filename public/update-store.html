@@ -1,0 +1,316 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+	<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+	<script type="text/javascript" language="javascript">
+		google.load("jquery", "1.3");
+	</script>
+	<script src="//www.parsecdn.com/js/parse-1.4.2.min.js"></script>
+	
+	
+	<script src="hungrybee.js"></script>
+
+		
+	<script type="text/javascript">
+		function go() {
+			$('#create_loading').css("display", "block");
+			$('#uploadBtn').attr("disabled", true);
+			var className = $('input:radio:checked[name="className"]').val();
+			
+			if (className == "HBFoodStore") {
+				/*
+			  	for (var i=0 ; i<2 ; i++) {
+			  		var imageFile;
+			  		var file;
+			  		if (i==0) {
+			  			file = $("#storeHome")[0].files[0];
+			  			imageFile = document.getElementById("storeHome").value;
+						imageFile = imageFile.substring(imageFile.lastIndexOf("\\") + 1);
+						
+			  		} else if (i==1) {
+			  			file = $("#storePromotion")[0].files[0];
+			  			imageFile = document.getElementById("storePromotion").value;
+						imageFile = imageFile.substring(imageFile.lastIndexOf("\\") + 1);
+						
+					}
+			  		
+			  		
+			  		var reader = new FileReader();
+				  	var parseLob = [];
+				  	reader.onload = function(e) {
+				  		var img = new Image();
+				  		console.log("enter onload :" + i);
+				  		img.src = e.target.result;
+				  		img.onload = function() {
+				  			var imgWidth = this.width;
+				  			var imgHeight = this.height;
+				  			console.log("imgWidth:" + imgWidth + ",imgHeight:" + imgHeight);
+				  			
+				  			var parseFile = new Parse.File(imageFile, file);
+				  			parseLob.push(parseFile);
+				  			console.log("file count:" + parseLob.length);
+				  			
+				  			if (parseLob.length == 2) {
+				  				var parseFile = new Parse.File(filename, file);
+							  	parseFile.saveAll().then(
+							  		function(fileSaved) {
+							  			console.log(fileSaved);
+							  		}, 
+							  		function(error) {
+								  		alert("save file error" + error);
+							  		}
+							  	);	
+				  			}
+				  		};
+				  	};
+				  	reader.readAsDataURL(file);
+				}
+			  	*/
+				
+				
+				
+				
+				
+				
+				var lat = document.getElementById("lat").value;
+				var lng = document.getElementById("lng").value;
+				var point = new Parse.GeoPoint({latitude: eval(lat), longitude: eval(lng)});
+				
+				var FoodStore = Parse.Object.extend("HBFoodStore");
+				var store = new FoodStore();
+				store.set("storeName", document.getElementById("storeName").value);
+				store.set("storeCode", document.getElementById("storeCode").value);
+				store.set("popular", document.getElementById("popular").value);
+				store.set("stickyTop", 3);
+				store.set("online", true);
+				store.set("locationGroup", document.getElementById("locationGroup").value);
+				store.set("cloudPrinter", document.getElementById("printer").value);
+				store.set("phone", document.getElementById("phone").value);
+				store.set("address", document.getElementById("address").value);
+				store.set("geoLocation", point);
+				store.save(null, {
+					success: function(storeSaved) {
+	        			console.log(document.getElementById("storeName").value + " Saved. " + storeSaved.id);	
+	        			$('#create_loading').css("display","none");	
+	        			$("#uploadBtn").removeAttr("disabled");
+	        		},
+	        		error: function(error) { 
+	        			console.error(JSON.stringify(error));
+	        		}
+	        	});
+				
+			} else if (className == "HBMealSet") {
+				
+				var needCupSize = $("#needCupSize").attr('checked');
+				var needAdditions = $("#needAdditions").attr('checked');
+				var needLargeAdditions = $("#needLargeAdditions").attr('checked');
+				var needFoodSize = $("#needFoodSize").attr('checked');
+				var needColdHot = $("#needColdHot").attr('checked');
+				var needIce = $("#needIce").attr('checked');
+				var needSugar = $("#needSugar").attr('checked');
+				var needSpicy = $("#needSpicy").attr('checked');
+				var needPepper = $("#needPepper").attr('checked');
+				
+				var HBFoodStore = Parse.Object.extend("HBFoodStore");
+				var store = new HBFoodStore();
+				store.id = $("#belongTo").val();
+				
+				var HBMealSet = Parse.Object.extend("HBMealSet");
+				var food = new HBMealSet();
+				
+				food.set("mealName", $("#mealName").val());
+				food.set("belongTo", store);
+				food.set("price", eval($("#price").val()));
+				food.set("maxQty", eval($("#maxQty").val()));
+				food.set("brief", $("#brief").val());
+				food.set("bags", eval($("#bags").val()));
+				food.set("extraPriceForSize", eval($("#extraPriceForSize").val()));
+				food.set("needCupSize", needCupSize);
+				food.set("needAdditions", needAdditions);
+				food.set("extraPriceForAdditions", eval(needAdditions?"5":"0"));
+				food.set("needLargeAdditions", needLargeAdditions);
+				food.set("extraPriceForLargeAdditions", eval(needAdditions?"10":"0"));
+				food.set("needFoodSize", needFoodSize);
+				food.set("needColdHot", needColdHot);
+				food.set("needIce", needIce);
+				food.set("needSugar", needSugar);
+				food.set("needSpicy", needSpicy);
+				food.set("needPepper", needPepper);
+				if($("#displayOrder").val() == "99") {
+					food.set("online", false); //店家叫外送
+				} else {
+					food.set("online", true);
+				}
+				
+				food.set("displayOrder", eval($("#displayOrder").val()));
+				food.save(null, {
+					success: function(foodSaved) {
+	        			console.log($("#mealName").val() + " Saved. " + foodSaved.id);	
+	        			$('#create_loading').css("display","none");
+	        			$("#uploadBtn").removeAttr("disabled");	
+	        		},
+	        		error: function(error) { 
+	        			console.error(JSON.stringify(error));
+	        		}
+	        	});
+				 
+			}
+		}
+		
+
+	</script>
+		
+</head>
+
+
+<body>
+	
+<h1>新增店家/餐點</h1>
+
+<form name="uploadForm">
+	<table border=0>
+		<tr>
+			<td valign="top">
+				<table border=0>
+					<tr>
+						<td colspan="2">
+							<input type="radio" name="className" value="HBFoodStore"> 店家
+						</td>
+					</tr>
+					<tr>
+						<td>店名:</td>
+						<td><input type="text" name="storeName" id="storeName"></td>
+					</tr>
+					<tr>
+						<td>招牌餐:</td>
+						<td><input type="text" name="popular" id="popular"></td>
+					</tr>
+					<tr>
+						<td>分區:</td>
+						<td><input type="text" name="locationGroup" id="locationGroup"></td>
+					</tr>
+					<tr>
+						<td>店代碼:</td>
+						<td><input type="text" name="storeCode" id="storeCode"></td>
+					</tr>
+					<tr>
+						<td>printer:</td>
+						<td><input type="text" name="printer" id="printer"></td>
+					</tr>
+					<tr>
+						<td>phone:</td>
+						<td><input type="text" name="phone" id="phone"></td>
+					</tr>
+					<tr>
+						<td>address:</td>
+						<td><input type="text" name="address" id="address"></td>
+					</tr>
+					<tr>
+						<td valign="top">lat/lng</td>
+						<td><input type="text" name="lat" id="lat"><BR>
+							<input type="text" name="lng" id="lng"></td>
+					</tr>
+					<tr>
+						<td>美食街圖檔:</td>
+						<td><input type="file" id="storeHome"></td>
+					</tr>
+					<tr>
+						<td>店家圖檔:</td>
+						<td><input type="file" id="storePromotion"></td>
+					</tr>
+				</table>
+			</td>
+			<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+			<td valign="top">
+				<table border=0>
+					<tr>
+						<td colspan="2"><input type="radio" name="className" value="HBMealSet"> 餐點</td>
+					</tr>
+					<tr>
+						<td>餐名:</td>
+						<td><input type="text" name="mealName" id="mealName"></td>
+					</tr>
+					<tr>
+						<td>店家:</td>
+						<td><input type="text" name="belongTo" id="belongTo"></td>
+					</tr>
+					<tr>
+						<td>UI呈現順序:</td>
+						<td><input type="text" name="displayOrder" id="displayOrder"></td>
+					</tr>
+					<tr>
+						<td>價錢:</td>
+						<td><input type="text" name="price" id="price"></td>
+					</tr>
+					<tr>
+						<td>單筆訂單最大量:</td>
+						<td><input type="text" name="maxQty" id="maxQty"></td>
+					</tr>
+					<tr>
+						<td>餐點簡介:</td>
+						<td><input type="text" name="brief" id="brief" value="招牌"></td>
+					</tr>
+					<tr>
+						<td>單件所佔容量:</td>
+						<td><input type="text" name="bags" id="bags"></td>
+					</tr>
+					<tr>
+						<td>extra price for size:</td>
+						<td><input type="text" name="extraPriceForSize" id="extraPriceForSize"></td>
+					</tr>
+					
+				</table>
+			</td>
+			<td valign="top">
+				<table>
+					<tr><td>&nbsp;</td></tr>
+					<tr>
+						<td valign="top">屬性設定:</td>
+						<td>
+							<input type="checkbox" id="needCupSize">大小杯選項<br>
+							<input type="checkbox" id="needAdditions">小杯加料$5<BR>
+							<input type="checkbox" id="needLargeAdditions">大杯加料$10<br>
+							
+							<input type="checkbox" id="needFoodSize">大小份選項<br>
+							<input type="checkbox" id="needColdHot">冷熱選項<br>
+							<input type="checkbox" id="needIce">冰塊選項<br>
+							<input type="checkbox" id="needSugar">甜度選項<br>
+							
+							<input type="checkbox" id="needSpicy">辣椒選項<br>
+							<input type="checkbox" id="needPepper">胡椒選項<br>
+					</tr>
+					<tr>
+						<td>150*150圖檔:</td>
+						<td><input type="file" id="storeHome"></td>
+					</tr>
+					<tr>
+						<td>677*450圖檔:</td>
+						<td><input type="file" id="storePromotion"></td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr align="center">
+			<td colspan="4">
+				<hr/>
+				<input type="button" id="uploadBtn" value="submit" onclick="go()">
+				<BR>
+				<div id="create_loading" style="display:none">
+					<img src="ajax-loader.gif">
+				</div>
+			</td>
+		</tr>
+	</table>	
+			
+	
+	
+	
+</form>
+
+
+
+</body>
+
+</html>
+

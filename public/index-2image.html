@@ -1,0 +1,219 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+	<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+	<script type="text/javascript" language="javascript">
+		google.load("jquery", "1.3");
+	</script>
+	<script src="//www.parsecdn.com/js/parse-1.4.2.min.js"></script>
+	
+	
+	<script src="hungrybee.js"></script>
+
+		
+	<script type="text/javascript">
+		function upload() {
+			//console.log("user:" + Parse.User.current());
+			
+			var filename = document.getElementById("profilePhotoFileUpload").value;
+			filename = filename.substring(filename.lastIndexOf("\\") + 1)
+			
+			var fileUploadControl = $("#profilePhotoFileUpload")[0];
+			var objectId = $("#objectId").val();
+			var className = $('input:radio:checked[name="className"]').val();
+			if (fileUploadControl.files.length > 0) {
+			  	var file = fileUploadControl.files[0];	
+			  	var reader = new FileReader();
+			  	var img = new Image();
+			  	reader.onload = function(e) {
+			  		img.src = e.target.result;
+			  		img.onload = function() {
+			  			var imgWidth = this.width;
+			  			var imgHeight = this.height;
+			  			
+			  			//save to parse
+			  			var parseFile = new Parse.File(filename, file);
+					  	parseFile.save().then(
+					  		function() {
+					  			var acl = new Parse.ACL();
+								acl.setPublicReadAccess(true);
+			
+					  			var HBLob = Parse.Object.extend("HBLob");
+						  		var lob = new HBLob();
+						  		lob.set("category", className);
+						  		lob.set("data", parseFile);
+						  		lob.set("fileName", filename);
+						  		lob.set("fileWidth", imgWidth);
+						  		lob.set("fileHeight", imgHeight);
+						  		lob.setACL(acl);
+						  		lob.save(null, {
+					        		success: function(lobCreated) {
+					        			//Parse.Cloud.useMasterKey();
+					        			console.log("className:" + className);
+					        			console.log("lobCreated:" + lobCreated.id);
+					        			
+					        			if (className == "HBFoodStore1") {
+					        				var storeId = $("#storeId").val();
+					        				console.log("find store:" + storeId);
+					        				var query = new Parse.Query("HBFoodStore");
+											query.get(storeId, {
+											  	success: function(storeFound) {
+											  		storeFound.set("storeImage", lobCreated);
+											  		storeFound.save(null,{
+											        	success: function(storeUpdated) {
+											        		console.log("storeImage update:" + storeUpdated.id);	
+											        	},
+											        	error: function(err) {
+											        		console.error("update store image error:", JSON.stringify(err));	
+											        	}	
+											        });
+											 	},
+											  	error: function(object, err) {
+													console.error("update store image error:", JSON.stringify(err));
+												}
+											});
+					        			
+					        			} else if (className == "HBFoodStore2") {
+					        				console.log("here");
+					        				var storeId = $("#storeId").val();
+					        				console.log("storeId:"+ storeId);
+					        				var query = new Parse.Query("HBFoodStore");
+					        				console.log("find store:" + storeId);
+											query.get(storeId, {
+											  	success: function(storeFound) {
+											  		console.log(" storeFound:" + storeFound.id);
+											  		storeFound.set("storeImage2", lobCreated);
+											  		storeFound.save(null,{
+											        	success: function(storeUpdated) {
+											        		console.log("storeImage2 update:" + storeUpdated.id);	
+											        	},
+											        	error: function(err) {
+											        		console.error("update store image2 error:", JSON.stringify(err));	
+											        	}	
+											        });
+											  		
+											 	},
+											  	error: function(object, err) {
+													console.error(err);
+												}
+											});
+					        			
+					        			} else if (className == "HBPromotion") {
+					        				var storeId = $("#storeId").val();
+					        				var foodStore = Parse.Object.extend("HBFoodStore");
+											var store = new foodStore();
+											store.id = storeId;
+					        				
+					        				var HBPromotion = Parse.Object.extend("HBPromotion");
+						  					var promotion = new HBPromotion();
+						  					promotion.set("promoteType", "store");
+						  					promotion.set("brief", "店家宣傳廣告");
+						  					promotion.set("forStore", store);
+						  					promotion.set("thumbnail", lobCreated);
+						  					promotion.setACL(acl);
+						  					promotion.save(null,{
+											        	success: function(promotionCreated) {
+											        		console.log("promotion Created:" + promotionCreated.id);	
+											        	},
+											        	error: function(err) {
+											        		console.error("create promotion image error:", JSON.stringify(err));	
+											        	}	
+											        });
+					        			
+					        			} else if (className == "HBMealSet") {
+					        				var imageType = $('input:radio:checked[name="imageType"]').val();
+					        				var mealId = $("#mealId").val();
+					        				var food = new Parse.Query("HBMealSet");
+											food.get(mealId, {
+											  	success: function(foodFound) {
+											  		if (imageType == "small") {
+											  			foodFound.set("thumbnail", lobCreated);
+											  		} else {
+											  			foodFound.set("foodImage", lobCreated);
+											  		}
+											  		foodFound.save(null,{
+											        	success: function(foodUpdated) {
+											        		console.log(foodFound.get("mealName") + " Updated:" + foodUpdated.id);	
+											        	},
+											        	error: function(err) {
+											        		console.error("foodUpdated error", JSON.stringify(err));	
+											        	}	
+											        });
+											 	},
+											  	error: function(err) {
+											  		
+													console.error("save food error:" + JSON.stringify(err));
+												}
+											});
+					        			}
+					        			
+					        				
+					        		},
+					        		error: function(error) { 
+					        			esponse.error(error);
+					        		}
+					        	});
+							  		
+						  		
+						  		
+						  		
+						  		
+						  		//console.log("save " + filename + " ok");
+					  		}, 
+					  		function(error) {
+						  		alert("save file error" + error);
+					  		}
+					  	);
+			  			
+			  			//~
+			  			
+			  			
+			  		};
+			  	};
+			  	reader.readAsDataURL(file);
+			  	
+			  	/*
+			  	
+			  	*/
+			}
+		}
+		
+
+	</script>
+		
+</head>
+
+
+<body>
+	
+<h1>Upload file to Parse</h1>
+
+<form name="uploadForm">
+	
+	<input type="file" id="profilePhotoFileUpload">(.png file)<BR><BR>
+	this file is for:<BR>
+	<input type="radio" name="className" value="HBFoodStore1">HBFoodStore image1<BR>
+	<input type="radio" name="className" value="HBFoodStore2">HBFoodStore image2<BR>
+	
+	<input type="radio" name="className" value="HBPromotion">HBPromotion<BR>
+	&nbsp;&nbsp;&nbsp;StoreId:<input type="text" name="storeId" id="storeId"><BR><BR>
+	
+	<input type="radio" name="className" value="HBMealSet">HBMealSet<BR>
+	&nbsp;&nbsp;&nbsp;MealId:<input type="mealId" id="mealId"><BR>
+	&nbsp;&nbsp;&nbsp;<input type="radio" name="imageType" value="small">155x155<BR>
+	&nbsp;&nbsp;&nbsp;<input type="radio" name="imageType" value="large">677x450<BR><BR>
+	
+	
+	
+	
+	<BR>	
+	<input type="button" value="upload" onclick="upload()">
+</form>
+
+
+
+</body>
+
+</html>
+

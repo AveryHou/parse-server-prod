@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	
+	<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+	
+	<!--script src="external/parse-1.6.14.js"></script-->
+	<script src="//www.parsecdn.com/js/parse-1.6.14.min.js"></script>
+	<script src="external/jquery/jquery-1.12.2.min.js"></script>
+	
+	<script src="hungrybee.js"></script>
+
+		
+	<script type="text/javascript">
+		function go() {
+			$('#foodNameCreated').html("");
+			$('#createStoreResult').css("display","none");
+			$('#create_loading').css("display", "block");
+			$('#uploadBtn').attr("disabled", true);
+			
+			var HBLob = Parse.Object.extend("HBLob");
+			var readAcl = new Parse.ACL();
+			readAcl.setPublicReadAccess(true);
+			
+			var className = $('input:radio:checked[name="className"]').val();
+			if (className == "HBFoodStore") {
+				var file1_155x200 = $("#store_155x200_1")[0].files[0];
+				var file2_155x200 = $("#store_155x200_2")[0].files[0];
+				var file3_320x96  = $("#store_320x96")[0].files[0];
+				
+				if (typeof file1_155x200 === "undefined" || typeof file2_155x200 === "undefined" || typeof file3_320x96 === "undefined") {
+					alert("店家相關圖檔未選");
+					$('#create_loading').css("display", "none");
+					$('#uploadBtn').attr("disabled", false);
+					return false;
+				}
+				
+				var filename1 = file1_155x200.name;
+				var filename2 = file2_155x200.name;
+				var filename3 = file3_320x96.name;
+				
+				var storeImage1 = new Parse.File(filename1, file1_155x200);
+				var storeImage2 = new Parse.File(filename2, file2_155x200);
+				var storeImage3 = new Parse.File(filename3, file3_320x96);
+				
+				storeImage1.save()
+					.then(function() {
+			  			var lob = new HBLob();
+				  		lob.set("category", className);
+				  		lob.set("data", storeImage1);
+				  		lob.set("fileName", filename1);
+				  		lob.set("fileWidth", 155);
+				  		lob.set("fileHeight", 200);
+						lob.setACL(readAcl);
+						return Parse.Promise.when(lob.save(), storeImage2.save());
+					})
+					.then(function(p1, p2) {
+						console.log("store image 1 created:" + p1.id);
+			  			var lob = new HBLob();
+				  		lob.set("category", className);
+				  		lob.set("data", p2);
+				  		lob.set("fileName", filename2);
+				  		lob.set("fileWidth", 155);
+				  		lob.set("fileHeight", 200);
+						lob.setACL(readAcl);
+						return Parse.Promise.when(p1, lob.save()); // 2 HBLob
+					})
+					.then(function(p1, p2) {
+						console.log("store image 2 created:" + p2.id);
+						
+						//查目前店數
+						var query = new Parse.Query("HBFoodStore");
+						var p3 = query.count();
+						
+						var p4 = Parse.Promise.as();
+						p4 = Parse.Cloud.run("findGeoPointByAddress", {	address: $("#address").val()});
+						return Parse.Promise.when(p1, p2, p3, p4);
+					})
+					.then(function(image1, image2, storeCount, point) {
+						var routineBreak = [];
+						$('input[name="routineBreak"]:checked').each(function() {
+						   routineBreak.push(this.value);
+						});
+						
+						var enableCallBeeOptions = [];
+						$('input[name="callBeeService"]:checked').each(function() {
+						   enableCallBeeOptions.push(this.value);
+						});
+						
+						console.log("location:" + JSON.stringify(point));
+			            var FoodStore = Parse.Object.extend("HBFoodStore");
+						var store = new FoodStore();
+						store.set("storeName", $("#storeName").val());
+						store.set("storeCode", $("#storeCode").val() + (storeCount+1));
+						store.set("popular", $("#popular").val());
+						store.set("stickyTop", 3);
+						store.set("online", (enableCallBeeOptions.length > 0)? false : true);
+						store.set("locationGroup", $("#locationGroup").val());
+						store.set("cloudPrinter", $("#printer").val());
+						store.set("phone", $("#phone").val());
+						store.set("address", $("#address").val());
+						store.set("addressNote", $("#addressNote").val());
+						store.set("geoLocation", point);
+						store.set("storeImage", image1);
+						store.set("storeImage2", image2);
+						store.set("legacy", false);
+						store.set("bankCode", $("#bankCode").val());
+						store.set("bankAccount", $("#bankAccount").val());
+						store.set("routineBreak", routineBreak.join(","));
+						store.set("enableCallBee", (enableCallBeeOptions.length > 0)? true : false);
+						
+			            return Parse.Promise.when(store.save(), storeImage3.save());
+					})
+					.then(function(p1, p2){
+						var lob = new HBLob();
+				  		lob.set("category", "HBPromotion");
+				  		lob.set("data", p2);
+				  		lob.set("fileName", filename3);
+				  		lob.set("fileWidth", 320);
+				  		lob.set("fileHeight", 96);
+						lob.setACL(readAcl);
+						return Parse.Promise.when(p1, lob.save()); 
+					})
+					.then(function(p1, p2) {
+						console.log("store image 3 created:" + p2.id);	
+						var HBPromotion = Parse.Object.extend("HBPromotion");
+	  					var promotion = new HBPromotion();
+	  					promotion.set("promoteType", "store");
+	  					promotion.set("brief", "店家宣傳廣告");
+	  					promotion.set("forStore", p1);
+	  					promotion.set("thumbnail", p2);
+	  					promotion.setACL(readAcl);
+	  					return promotion.save();
+					})
+					.then(
+						function (result) {
+							$('#create_loading').css("display","none");
+							$('#createStoreResult').css("display","block");	
+			        		$("#uploadBtn").removeAttr("disabled");
+			        		
+			        		$("#store_155x200_1").val("");
+		        			$("#store_155x200_2").val("");
+		        			$("#store_320x96").val("");
+							console.log("store create OK:" + JSON.stringify(result.get("forStore").get("storeName")));
+						},
+						function (error) {
+							console.log("error:" + JSON.stringify(error));
+						}
+					);
+					
+			} else { ////// 建餐點 //////
+				
+				var file1_155x155 = $("#food_155x155")[0].files[0];
+				var file2_677x450 = $("#food_677x450")[0].files[0];
+				if (typeof file1_155x155 === "undefined" || typeof file2_677x450 === "undefined") {
+					alert("餐點相關圖檔未選");
+					$('#create_loading').css("display", "none");
+					$('#uploadBtn').attr("disabled", false);
+					return false;
+				}
+				
+				var filename1 = file1_155x155.name;
+				var filename2 = file2_677x450.name;
+				
+				var storeImage1 = new Parse.File(filename1, file1_155x155);
+				var storeImage2 = new Parse.File(filename2, file2_677x450);
+				
+				storeImage1.save()
+				.then(function() {
+		  			var lob = new HBLob();
+			  		lob.set("category", className);
+			  		lob.set("data", storeImage1);
+			  		lob.set("fileName", filename1);
+			  		lob.set("fileWidth", 155);
+			  		lob.set("fileHeight", 155);
+					lob.setACL(readAcl);
+					return Parse.Promise.when(lob.save(), storeImage2.save());
+				})
+				.then(function(p1, p2) {
+					console.log("store image 1 created:" + p1.id);
+		  			var lob = new HBLob();
+			  		lob.set("category", className);
+			  		lob.set("data", p2);
+			  		lob.set("fileName", filename2);
+			  		lob.set("fileWidth", 677);
+			  		lob.set("fileHeight", 450);
+					lob.setACL(readAcl);
+					return Parse.Promise.when(p1, lob.save()); // 2 HBLob
+				})
+				.then(function(p1, p2) {
+					console.log("store image 2 created:" + p2.id);
+					
+					var needCupSize = $("#needCupSize").is(':checked');
+					var needAdditions = $("#needAdditions").is(':checked');
+					var needLargeAdditions = $("#needLargeAdditions").is(':checked');
+					var needFoodSize = $("#needFoodSize").is(':checked');
+					var needColdHot = $("#needColdHot").is(':checked');
+					var needIce = $("#needIce").is(':checked');
+					var needSugar = $("#needSugar").is(':checked');
+					var needSpicy = $("#needSpicy").is(':checked');
+					var needPepper = $("#needPepper").is(':checked');
+					
+					var HBFoodStore = Parse.Object.extend("HBFoodStore");
+					var store = new HBFoodStore();
+					store.id = $("#belongTo").val();
+					
+					var HBMealSet = Parse.Object.extend("HBMealSet");
+					var food = new HBMealSet();
+					food.set("mealName", $("#mealName").val());
+					food.set("belongTo", store);
+					food.set("price", eval($("#price").val()));
+					food.set("maxQty", eval($("#maxQty").val()));
+					food.set("brief", $("#brief").val());
+					food.set("bags", eval($("#bags").val()));
+					food.set("extraPriceForSize", eval($("#extraPriceForSize").val()));
+					food.set("needCupSize", needCupSize);
+					food.set("needAdditions", needAdditions);
+					food.set("extraPriceForAdditions", eval(needAdditions?"5":"0"));
+					food.set("needLargeAdditions", needLargeAdditions);
+					food.set("extraPriceForLargeAdditions", eval(needAdditions?"10":"0"));
+					food.set("needFoodSize", needFoodSize);
+					food.set("needColdHot", needColdHot);
+					food.set("needIce", needIce);
+					food.set("needSugar", needSugar);
+					food.set("needSpicy", needSpicy);
+					food.set("needPepper", needPepper);
+					food.set("online", true);
+					food.set("displayOrder", eval($("#displayOrder").val()));
+					food.set("thumbnail", p1);
+					food.set("foodImage", p2);
+					return food.save();
+				})
+				.then(
+					function (foodSaved) {
+						$('#create_loading').css("display","none");
+						$('#foodNameCreated').html(foodSaved.get("mealName") + " 建立完成");	
+		        		$("#uploadBtn").removeAttr("disabled");
+		        		
+		        		$("#food_155x155").val("");
+		        		$("#food_677x450").val("");
+		        		
+						console.log("food create OK:" + JSON.stringify(foodSaved.get("mealName")));
+					},
+					function (error) {
+						console.log("create food error:" + JSON.stringify(error));
+					}
+				);
+				
+			}	
+		}
+		
+		$(document).on("change", "#className" ,function (event) {
+			var actionType = $('input:radio:checked[name="className"]').val();
+			if(actionType == "HBMealSet") {
+				//load store info
+				
+				Parse.Cloud.run("getFoodStoreForCMS", 
+						{	
+						}, 
+						{
+						success: function(results) {
+							var options = [];
+							var option = "<option value='---'> --- 請選店家 -- </option>";
+							options.push(option);
+					 	 	for(var i=0 ; i<results.length ; i++) {
+						 		option = "<option value='" + results[i].id + "'>" + results[i].get("storeName") + "</option>";
+						 		options.push(option);
+						 	}
+						 	$("#belongTo").html(options.join(""));
+						},
+					 	error: function(error) {
+					 		console.log("submitSurveyWebForm error:" + error.message);
+						}
+					});
+				
+				
+			}//~if
+		});
+
+	</script>
+		
+</head>
+
+
+<body>
+	
+<h1>新增店家/餐點</h1>
+
+<form name="uploadForm">
+	<table border=0>
+		<tr>
+			<td valign="top" width="45%">
+				<table border=0>
+					<tr>
+						<td colspan="2">
+							<input type="radio" id="className" name="className" value="HBFoodStore"> 新增店家
+						</td>
+					</tr>
+					<tr>
+						<td>店名:</td>
+						<td><input type="text" name="storeName" id="storeName" value=""></td>
+					</tr>
+					<tr>
+						<td>招牌餐:</td>
+						<td><input type="text" name="popular" id="popular" value=""></td>
+					</tr>
+					<tr>
+						<td>分區:</td>
+						<td>
+							<select name="locationGroup" id="locationGroup">
+								<option value="A">市區</option>
+								<option value="B">清大</option>
+								<option value="C">香山區</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td>類別:</td>
+						<td>
+							<select name="storeCode" id="storeCode">
+								<option value="D">飲料類</option>
+								<option value="R">非飲料類</option>
+							</select>
+						</td>
+					</tr>
+					<!--tr>
+						<td>印表機資訊:</td>
+						<td><input type="text" name="printer" id="printer" placeholder="非必填" value=""></td>
+					</tr-->
+					<tr>
+						<td><input type="hidden" name="printer" id="printer" placeholder="非必填" value=""></td>
+						<td>
+							<input type="checkbox" name="callBeeService" value="yes">只使用外送服務
+						</td>
+					</tr>
+					<tr>
+						<td valign="top">聯絡電話:</td>
+						<td>
+							格式:0910-111222 or 03-6230127<BR>
+							<input type="text" name="phone" id="phone" value="">
+						</td>
+					</tr>
+					<tr>
+						<td>店家地址:</td>
+						<td><input type="text" size="40" name="address" id="address" value=""></td>
+					</tr>
+					<tr>
+						<td>地址備註:</td>
+						<td><input type="text" size="40" name="addressNote" id="addressNote" placeholder="例:7-11旁" value=""></td>
+					</tr>
+					<tr>
+						<td>銀行代號:</td>
+						<td><input type="text" size="10" name="bankCode" id="bankCode" value=""></td>
+					</tr>
+					<tr>
+						<td>銀行帳號:</td>
+						<td><input type="text" size="20" name="bankAccount" id="bankAccount" value=""></td>
+					</tr>
+					<tr>
+						<td>公休日</td>
+						<td>
+							<input type="checkbox" name="routineBreak" value="1">星期一 <BR>
+							<input type="checkbox" name="routineBreak" value="2">星期二 <BR>
+							<input type="checkbox" name="routineBreak" value="3">星期三 <BR>
+							<input type="checkbox" name="routineBreak" value="4">星期四 <BR>
+							<input type="checkbox" name="routineBreak" value="5">星期五 <BR>
+							<input type="checkbox" name="routineBreak" value="6" disabled checked>星期六 <BR>
+							<input type="checkbox" name="routineBreak" value="0" disabled checked>星期日 
+								
+						</td>
+					</tr>
+					<tr>
+						<td>155*200 圖檔一:</td>
+						<td><input type="file" id="store_155x200_1"></td>
+					</tr>
+					<tr>
+						<td>155*200 圖檔二:</td>
+						<td><input type="file" id="store_155x200_2"></td>
+					</tr>
+					<tr>
+						<td>320*96 圖檔:</td>
+						<td><input type="file" id="store_320x96"></td>
+					</tr>
+					<tr id="createStoreResult" style="display:none">
+						<td colspan=2"><font color="red"><h2>店家建立成功</h2></font></td>
+					</tr>
+				</table>
+			</td>
+			
+			<!----------------------------->
+			<!----------------------------->
+			<!----------------------------->
+			
+			
+			<td width="5%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+			<td valign="top">
+				<table border=0 width="100%">
+					<tr>
+						<td colspan="2"><input type="radio" id="className"  name="className" value="HBMealSet"> 新增餐點</td>
+					</tr>
+					<tr>
+						<td>店家:</td>
+						<td>
+							<select name="belongTo" id="belongTo">
+								
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td>餐名:</td>
+						<td><input type="text" name="mealName" id="mealName" ></td>
+					</tr>
+					<tr>
+						<td>餐點順序:</td>
+						<td><input type="text" name="displayOrder" id="displayOrder"></td>
+					</tr>
+					<tr>
+						<td>單價:</td>
+						<td><input type="text" name="price" id="price"></td>
+					</tr>
+					<tr>
+						<td>1小時約幾份:</td>
+						<td><input type="text" name="maxQty" id="maxQty"></td>
+					</tr>
+					<tr>
+						<td>餐點簡介:</td>
+						<td><input type="text" name="brief" id="brief" value="本店招牌餐"></td>
+					</tr>
+					<tr>
+						<td valign="top">單件所佔容量:</td>
+						<td>
+							例:一個保溫袋可裝20份，則輸入 0.05<BR>
+							<input type="text" name="bags" id="bags">
+						</td>
+					</tr>
+					<tr>
+						<td>大份比小份多多少錢:</td>
+						<td><input type="text" name="extraPriceForSize" id="extraPriceForSize" value="0"></td>
+					</tr>
+					<tr>
+						<td>屬性設定:</td>
+						<td>
+							<input type="checkbox" id="needCupSize">有大小杯選項<br>
+							<input type="checkbox" id="needAdditions">小杯加料$5<BR>
+							<input type="checkbox" id="needLargeAdditions">大杯加料$10<br>
+							
+							<input type="checkbox" id="needFoodSize">有大小份選項<br>
+							<input type="checkbox" id="needColdHot">有冷熱選項<br>
+							<input type="checkbox" id="needIce">有冰塊選項<br>
+							<input type="checkbox" id="needSugar">有甜度選項<br>
+							
+							<input type="checkbox" id="needSpicy">有辣椒選項<br>
+							<input type="checkbox" id="needPepper">有胡椒選項<br>
+					</tr>
+					<tr>
+						<td>155*155 圖檔:</td>
+						<td><input type="file" id="food_155x155"></td>
+					</tr>
+					<tr>
+						<td>677*450 圖檔:</td>
+						<td><input type="file" id="food_677x450"></td>
+					</tr>
+					<tr >
+						<td colspan=2"><font color="red"><h3><span id="foodNameCreated"></span></h3></font></td>
+					</tr>
+				</table>
+			</td>
+			
+		</tr>
+		<tr align="center">
+			<td colspan="4">
+				<hr/>
+				<input type="button" id="uploadBtn" value="submit" onclick="go()">
+				<BR>
+				<div id="create_loading" style="display:none">
+					<img src="ajax-loader.gif">
+				</div>
+			</td>
+		</tr>
+	</table>	
+			
+	
+	
+	
+</form>
+
+
+
+</body>
+
+</html>
+

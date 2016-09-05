@@ -1,0 +1,94 @@
+<html>
+<head>
+	<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+	<script type="text/javascript" language="javascript">
+		google.load("jquery", "1.3");
+	</script>
+	<script src="//www.parsecdn.com/js/parse-1.4.2.min.js"></script>
+
+	<script type="text/javascript">
+		Parse.initialize("9O3uQHctMnz86F6m3lifIlwKrMGONwlUjO2OL4uf", "nbkR1HRcOkFEa4J73rPsWvaZsqa6O6BHI0GSGClz");
+
+	</script>
+		
+	<script type="text/javascript">
+		function upload() {
+			var fileUploadControl = $("#profilePhotoFileUpload")[0];
+			var storeId = $("#store").val();
+			var className = $('input:radio:checked[name="className"]').val()
+			
+			
+			if (fileUploadControl.files.length > 0) {
+			  	var file = fileUploadControl.files[0];
+			  	var name = storeId + ".jpg";
+
+			  	var parseFile = new Parse.File(name, file);
+			  	parseFile.save().then(function() {
+				  	if (className == "HBFoodStore" ) {
+				  		var FoodStore = Parse.Object.extend("HBFoodStore");
+						var query = new Parse.Query(FoodStore);
+						query.equalTo("objectId", storeId);
+						query.find({
+						    success: function(results) {
+						      	var store = results[0];
+							  	store.set("image", parseFile);
+							  	store.save();
+							  	console.log("save " + storeId + " ok");
+						    },
+						    error: function(error) {
+						      	alert("Error: " + error.code + " " + error.message);
+						    }
+						  });
+				  	} else if (className == "HBMealSet"){
+				  		var HBMealSet = Parse.Object.extend("HBMealSet");
+						var query = new Parse.Query(HBMealSet);
+						query.equalTo("objectId", storeId);
+						query.find({
+						    success: function(results) {
+						      	var meal = results[0];
+							  	meal.set("foodImage", parseFile);
+							  	meal.save();
+							  	console.log("save " + storeId + " ok");
+						    },
+						    error: function(error) {
+						      alert("Error: " + error.code + " " + error.message);
+						    }
+						});
+				  	}
+				  
+				  
+				  
+			  }, function(error) {
+				  alert("save file error" + error);
+			  });
+			  
+			}
+			
+			
+		}
+		
+
+	</script>
+		
+</head>
+
+
+<body>
+Hello Parse
+
+<form name="uploadForm">
+<input type="file" id="profilePhotoFileUpload"><BR>
+object id:<input type="text" id="store"><BR>	
+
+<input type="radio" name="className" value="HBFoodStore">HBFoodStore
+<input type="radio" name="className" value="HBMealSet">HBMealSet
+<BR>	
+	<input type="button" value="upload" onclick="upload()">
+</form>
+
+
+
+</body>
+
+</html>
+

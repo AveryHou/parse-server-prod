@@ -1,0 +1,72 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+    <META HTTP-EQUIV="PRAGMA" CONTENT="NO-CACHE">
+	
+	<!-- jquery mobile -->
+    <link rel="stylesheet" href="external/jquery-mobile/jquery.mobile-1.4.5.css" />
+	<script src="external/jquery/jquery-1.12.2.min.js"></script>
+	<script src="external/jquery-mobile/jquery.mobile-1.4.5.min.js"></script>
+		
+</head>
+
+
+<body>
+
+<a href="#" id="openiOS" data-role="button" style="display:none">trigger hungrybee ios</a>
+<BR>
+<a href="#" id="openAndroid" data-role="button"  style="display:none">trigger hungrybee android</a>
+
+<script type="text/javascript">
+		
+		$(document).ready(function() {
+			var clientAgent = navigator.userAgent;
+		
+			var loc = window.location.toString();
+			var params = loc.substring(loc.indexOf("?"));
+			
+			if (clientAgent.indexOf("Mac OS") != -1) { // iOS
+				var iosAppURL = "https://itunes.apple.com/WebObjects/MZStore.woa/wa/viewSoftware?id=1037734044&mt=8";
+				if (clientAgent.indexOf("iPhone") != -1 || clientAgent.indexOf("iPad") != -1 || clientAgent.indexOf("iPod") != -1) {
+					
+					try {
+						window.location = "HungryBee://" + params;
+						//var mylink = "HungryBee://" + params;
+						//$("#openiOS").attr("href", mylink);
+	  					//$("#openiOS")[0].click();
+	  					
+	  					window.location = "HungryBee://" + params;
+						setTimeout(function() {
+						  window.location = iosAppURL;
+						}, 250);
+					} catch(e) {
+						window.location = iosAppURL;
+					}
+				} else { //Mac OS
+					window.location = iosAppURL;
+				}
+			} else {
+				var androidAppURL = "market://details?id=net.hungrybee.hungrybeeuser";
+				if (clientAgent.indexOf("Android") != -1) { //Android
+					
+					var mylink = "hungrybee://join" + params;
+					//$("#openAndroid").prop("href", mylink);
+					$("#openAndroid").prop("href", "intent://scan/#Intent;scheme=" + mylink + ";package=net.hungrybee.hungrybeeuser;S.browser_fallback_url=" + androidAppURL + ";end");
+					$("#openAndroid")[0].click();
+					
+				} else { //others
+					window.location = androidAppURL;
+				}
+			}
+		});
+		
+	</script>
+
+
+</body>
+
+</html>
+
