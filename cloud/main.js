@@ -16,7 +16,7 @@ var Image = require("parse-image");
 var prop = require("cloud/app_properties.js");
 
 Parse.Cloud.define('hello', function(req, res) {
-  res.success('Hi');
+  res.success('Hello heroku');
 });
 
 //
