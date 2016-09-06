@@ -4,11 +4,11 @@
  * 登入相關
  **/
 
-var logger = require("cloud/mail_service.js");
-var prop = require("cloud/app_properties.js");
+var logger = require("./mail_service.js");
+var prop = require("./app_properties.js");
 
 // Twillio 發簡訊
-var sms = require("cloud/sms.js");
+var sms = require("./sms.js");
 
 function sendCodeSms(phoneNumber, code) {
 	console.log("twillio sendCodeSms to [" + phoneNumber + "] " + code);
