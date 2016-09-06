@@ -2,7 +2,7 @@
 	 log service
 */
 
-var prop = require("cloud/app_properties.js");
+var prop = require("./app_properties.js");
 
 exports.subject = function(funcName, errBrief) {
 	return "[CloudCode Error][" + funcName + "] " + errBrief;	
