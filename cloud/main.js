@@ -9,11 +9,7 @@ require("cloud/storeapp-demo.js");
 require("cloud/customer_service_management_function.js");
 require("cloud/call-bee.js");
 
-var util = require("cloud/util.js");
-var _ = require("underscore");
-var logger = require("cloud/mail_service.js");
-var Image = require("parse-image");
-var prop = require("cloud/app_properties.js");
+
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
