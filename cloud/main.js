@@ -5,6 +5,13 @@ var prop = require("./app_properties.js");
 var Mailgun = require('mailgun');
 //Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
 
+
+var mailgun_domain = "mg.wintopinfo.com";
+var mailgun_key = "key-ada9303e5d3b184d2e601674d53b1e3b";
+
+var Mailgun = require('mailgun-js')({apiKey: mailgun_key, domain: mailgun_domain});
+
+
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
 });
