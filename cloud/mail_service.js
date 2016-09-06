@@ -46,8 +46,31 @@ exports.send_info = function (mailTo, mailCc, subject, body, orderId) {
 	send(mailTo, mailCc, subject, body);
 }
 
-var Mailgun = require('mailgun');
-Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
+//var Mailgun = require('mailgun');
+//Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
+
+var Mailgun = require('mailgun-js')({apiKey: prop.mailgun_key(), domain: prop.mailgun_domain()});
+
+/*
+https://github.com/bojand/mailgun-js
+
+var api_key = 'key-XXXXXXXXXXXXXXXXXXXXXXX';
+var domain = 'mydomain.mailgun.org';
+var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
+
+var data = {
+  from: prop.admin_mail(),
+  to: mailto,
+  subject: "[" + prop.env() + "] " + subject,
+  html: body
+};
+
+mailgun.messages().send(data, function (error, body) {
+  console.log(body);
+});
+
+*/
+
 
 function send(mailto, mailCc, subject, body) {
 	console.log("mailto:" + mailto);
