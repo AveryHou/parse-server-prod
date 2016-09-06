@@ -1,4 +1,4 @@
-require("cloud/promotion_function.js");
+require("./cloud/promotion_function.js");
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
