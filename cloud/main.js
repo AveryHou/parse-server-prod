@@ -2,7 +2,7 @@ require("./promotion_function.js");
 //require("./login_function.js");
 
 var prop = require("./app_properties.js");
-var Mailgun = require('mailgun');
+//var Mailgun = require('mailgun');
 //Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
 
 
