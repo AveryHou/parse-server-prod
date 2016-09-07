@@ -1,5 +1,5 @@
-var prop = require("cloud/app_properties.js");
-var logger = require("cloud/mail_service.js");
+var prop = require("./app_properties.js");
+var logger = require("./mail_service.js");
 
  //key was created in google developer console
 var googleKey = "AIzaSyAOC2vryr8Bfu27LaG3RaZ7WeFBd5JPhx0";

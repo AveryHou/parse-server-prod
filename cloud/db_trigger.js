@@ -1,4 +1,4 @@
-var prop = require("cloud/app_properties.js");
+var prop = require("./app_properties.js");
 var _ = require("underscore");
 /*
 Parse.Cloud.afterSave("setCheckoutTime", function(request) {
@@ -32,7 +32,7 @@ var mailToAllMembers = "info@hungrybee.net";
 var mailCC = "avery.hou@gmail.com";
 
 //[外送小蜜蜂] 送出預約單
-var mail = require("cloud/mail_service.js");
+var mail = require("./mail_service.js");
 Parse.Cloud.afterSave("HBTrainingBooking", function(request) {
 	
 	if (request.object.get("bookingSubmitted")) {  

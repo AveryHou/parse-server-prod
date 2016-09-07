@@ -2,9 +2,9 @@
  * 與店家呼叫小蜜蜂相關服務
  **/
  
-var logger = require("cloud/mail_service.js");
-var prop = require("cloud/app_properties.js");
-var util = require("cloud/util.js");
+var logger = require("./mail_service.js");
+var prop = require("./app_properties.js");
+var util = require("./util.js");
 
 
 Parse.Cloud.define("callBee", function(request, response) {

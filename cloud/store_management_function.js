@@ -1,7 +1,7 @@
 // JavaScript source code
 
-var logger = require("cloud/mail_service.js");
-var prop = require("cloud/app_properties.js");
+var logger = require("./mail_service.js");
+var prop = require("./app_properties.js");
 
 Parse.Cloud.define("hello", function (request, response) {
 

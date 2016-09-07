@@ -2,9 +2,9 @@
  * for web app only 
  **/
  
-var logger = require("cloud/mail_service.js");
-var prop = require("cloud/app_properties.js");
-var util = require("cloud/util.js");
+var logger = require("./mail_service.js");
+var prop = require("./app_properties.js");
+var util = require("./util.js");
 var _ = require("underscore");
 
 Parse.Cloud.define("getFoodDetail", function(request, response) {

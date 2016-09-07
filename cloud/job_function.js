@@ -2,8 +2,8 @@
  *
  **/
 
-var logger = require("cloud/mail_service.js");
-var prop = require("cloud/app_properties.js");
+var logger = require("./mail_service.js");
+var prop = require("./app_properties.js");
 
 //set Role on system initializationtriggered by Parse Job once.
 Parse.Cloud.job("shortenUrlForOrder", function(req, status) {
@@ -339,8 +339,8 @@ Parse.Cloud.job("getBookingUser", function(req, status) {
     
 });
 
-var prop = require("cloud/app_properties.js");
-var mail = require("cloud/mail_service.js");
+var prop = require("./app_properties.js");
+var mail = require("./mail_service.js");
 
 function send_nofity_mail(validateBookings, dateString) {
 	
