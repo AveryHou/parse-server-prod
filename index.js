@@ -17,6 +17,7 @@ var api = new ParseServer({
   appId: process.env.APP_ID || 'oVYLOizsuLXxCRucXmrgWF6q0OjlXc9d1fXfBDmU',
   masterKey: process.env.MASTER_KEY || 'IdnvI0MJAOVh2m96HVyzprD1mieHYUH2viIoSDaw', //Add your master key here. Keep it secret!
   serverURL: process.env.SERVER_URL || 'http://hbstage.herokuapp.com/parse/',  // Don't forget to change to https if needed
+  fileKey: "3ccf8d1a-7407-4832-86cc-4ab5fab42f1c",
   liveQuery: {
     classNames: ["Posts", "Comments"] // List of classes to support for query subscriptions
   }
