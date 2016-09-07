@@ -2,19 +2,19 @@ require("./promotion_function.js");
 //require("./login_function.js");
 
 var prop = require("./app_properties.js");
-//var Mailgun = require('mailgun');
-//Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
-
-
-var mailgun_domain = "mg.wintopinfo.com";
-var mailgun_key = "key-ada9303e5d3b184d2e601674d53b1e3b";
-
-var Mailgun = require('mailgun-js')({apiKey: mailgun_key, domain: mailgun_domain});
+var logger = require("./mail_service.js");
 
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
 });
+
+Parse.Cloud.define('testmail', function(req, res) {
+	logger.send_notify(prop.admin_mail(), prop.mail_cc(), "hello mailgun", "<p>mail sent!!!</p>");
+	res.success('Hello mail');
+});
+
+
 
 //
 Parse.Cloud.define("getFoodStore", function(request, response) {

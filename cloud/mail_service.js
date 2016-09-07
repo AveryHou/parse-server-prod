@@ -72,6 +72,7 @@ mailgun.messages().send(data, function (error, body) {
 */
 
 
+
 function send(mailto, mailCc, subject, body) {
 	console.log("mailto:" + mailto);
 	console.log("subject:" + "[" + prop.env() + "]"+ subject);
@@ -79,6 +80,21 @@ function send(mailto, mailCc, subject, body) {
 	console.log("from:" + prop.admin_mail());
 	
 	if (mailCc == null || mailCc == "") {
+		var data = {
+			  from: prop.admin_mail(),
+			  to: mailto,
+			  subject: "[" + prop.env() + "] " + subject,
+			  html: body
+			};
+			
+			mailgun.messages().send(data, function (error, body) {
+				if(error) {
+					console.error("send mail failed." + JSON.stringify(error));
+				} else {
+					console.log("send mail to " + mailto  + " successfully");
+				}
+			});
+		/*
 		Mailgun.sendEmail({
 			to: mailto, 
 	  		from: prop.admin_mail() ,
@@ -93,8 +109,25 @@ function send(mailto, mailCc, subject, body) {
 		    	console.error("send mail failed." + JSON.stringify(err));
 		    }
 		});
+		*/
 	} else {
 		console.log("mailCc:" + mailCc);
+		var data = {
+			  from: prop.admin_mail(),
+			  to: mailto,
+			  cc: mailCc,
+			  subject: "[" + prop.env() + "] " + subject,
+			  html: body
+			};
+			
+			mailgun.messages().send(data, function (error, body) {
+				if(error) {
+					console.error("send mail failed." + JSON.stringify(error));
+				} else {
+					console.log("send mail to " + mailto  + " successfully");
+				}
+			});
+		/*
 		Mailgun.sendEmail({
 			to: mailto, 
 	  		from: prop.admin_mail() ,
@@ -110,6 +143,7 @@ function send(mailto, mailCc, subject, body) {
 		    	console.error("send mail failed." + JSON.stringify(err));
 		  	}
 		});
+		*/
 	}
 	
 }
