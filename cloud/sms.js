@@ -8,7 +8,8 @@ var twilio = require('twilio')(prop.twilio_sid(), prop.twilio_token());
 exports.send = function(phoneNoTo, msg) {
 	console.log("send sms to [" + phoneNoTo + "] " + msg);
 	
-	twilio.sendSms({
+	//twilio.sendSms({
+	twilio.sendMessage({
 		to: '+886' + phoneNoTo,
 		from: prop.twilio_phone_no(),
 		body: msg
@@ -21,7 +22,7 @@ exports.send = function(phoneNoTo, msg) {
 			return true;
 		}
 	});
-}
-
-
+	
+});
+	
 	

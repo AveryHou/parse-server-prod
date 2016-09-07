@@ -4,6 +4,7 @@ require("./promotion_function.js");
 var prop = require("./app_properties.js");
 var logger = require("./mail_service.js");
 
+var sms = require("./sms.js");
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
@@ -15,6 +16,12 @@ Parse.Cloud.define('testmail', function(req, res) {
 	logger.send_notify(prop.admin_mail(), prop.mail_cc(), "hello mailgun", body);
 	res.success('Hello mail');
 });
+
+Parse.Cloud.define('testsms', function(req, res) {
+	sms.send("0919188224",  "I'm from heroku...");
+	res.success('Hello twilio');
+});
+
 
 
 
