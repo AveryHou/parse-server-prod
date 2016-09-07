@@ -10,7 +10,9 @@ Parse.Cloud.define('hello', function(req, res) {
 });
 
 Parse.Cloud.define('testmail', function(req, res) {
-	logger.send_notify(prop.admin_mail(), prop.mail_cc(), "hello mailgun", "<p>mail sent!!!</p>");
+	var body = "<p>mail sent!!!</p>";
+	body += prop.order_info();
+	logger.send_notify(prop.admin_mail(), prop.mail_cc(), "hello mailgun", body);
 	res.success('Hello mail');
 });
 
