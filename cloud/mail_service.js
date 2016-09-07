@@ -48,30 +48,7 @@ exports.send_info = function (mailTo, mailCc, subject, body, orderId) {
 
 //var Mailgun = require('mailgun');
 //Mailgun.initialize(prop.mailgun_domain(), prop.mailgun_key());
-
-var Mailgun = require('mailgun-js')({apiKey: prop.mailgun_key(), domain: prop.mailgun_domain()});
-
-/*
-https://github.com/bojand/mailgun-js
-
-var api_key = 'key-XXXXXXXXXXXXXXXXXXXXXXX';
-var domain = 'mydomain.mailgun.org';
-var mailgun = require('mailgun-js')({apiKey: api_key, domain: domain});
-
-var data = {
-  from: prop.admin_mail(),
-  to: mailto,
-  subject: "[" + prop.env() + "] " + subject,
-  html: body
-};
-
-mailgun.messages().send(data, function (error, body) {
-  console.log(body);
-});
-
-*/
-
-
+var mailGunService = require('mailgun-js')({apiKey: prop.mailgun_key(), domain: prop.mailgun_domain()});
 
 function send(mailto, mailCc, subject, body) {
 	console.log("mailto:" + mailto);
@@ -87,7 +64,7 @@ function send(mailto, mailCc, subject, body) {
 			  html: body
 			};
 			
-			mailgun.messages().send(data, function (error, body) {
+			mailGunService.messages().send(data, function (error, body) {
 				if(error) {
 					console.error("send mail failed." + JSON.stringify(error));
 				} else {
@@ -95,7 +72,7 @@ function send(mailto, mailCc, subject, body) {
 				}
 			});
 		/*
-		Mailgun.sendEmail({
+		mailGunService.sendEmail({
 			to: mailto, 
 	  		from: prop.admin_mail() ,
 	  		subject: "[" + prop.env() + "] " + subject,
@@ -120,7 +97,7 @@ function send(mailto, mailCc, subject, body) {
 			  html: body
 			};
 			
-			mailgun.messages().send(data, function (error, body) {
+			mailGunService.messages().send(data, function (error, body) {
 				if(error) {
 					console.error("send mail failed." + JSON.stringify(error));
 				} else {
@@ -128,7 +105,7 @@ function send(mailto, mailCc, subject, body) {
 				}
 			});
 		/*
-		Mailgun.sendEmail({
+		mailGunService.sendEmail({
 			to: mailto, 
 	  		from: prop.admin_mail() ,
 	  		cc: mailCc,
