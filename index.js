@@ -14,9 +14,9 @@ if (!databaseUri) {
 var api = new ParseServer({
   databaseURI: databaseUri || 'mongodb://hbdev:123123@ds139725.mlab.com:39725/hungrybee-dev',
   cloud: process.env.CLOUD_CODE_MAIN || __dirname + '/cloud/main.js',
-  appId: process.env.APP_ID || 'oVYLOizsuLXxCRucXmrgWF6q0OjlXc9d1fXfBDmU',
-  masterKey: process.env.MASTER_KEY || 'IdnvI0MJAOVh2m96HVyzprD1mieHYUH2viIoSDaw', //Add your master key here. Keep it secret!
-  serverURL: process.env.SERVER_URL || 'http://hbstage.herokuapp.com/parse/',  // Don't forget to change to https if needed
+  appId: process.env.APP_ID || 'myAppId',
+  masterKey: process.env.MASTER_KEY || 'myMasterKey', //Add your master key here. Keep it secret!
+  serverURL: process.env.SERVER_URL || 'http://hbdevtest01.herokuapp.com/parse',  // Don't forget to change to https if needed
   fileKey: "3ccf8d1a-7407-4832-86cc-4ab5fab42f1c",
   liveQuery: {
     classNames: ["Posts", "Comments"] // List of classes to support for query subscriptions
