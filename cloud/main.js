@@ -3,7 +3,7 @@ require("./login_function.js");
 
 var util = require("./util.js");
 var _ = require("underscore");
-var Image = require("parse-image");
+//var Image = require("parse-image");
 
 
 var prop = require("./app_properties.js");
