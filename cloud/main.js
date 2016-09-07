@@ -4,8 +4,7 @@ require("./promotion_function.js");
 var prop = require("./app_properties.js");
 var logger = require("./mail_service.js");
 
-//var sms = require("./sms.js");
-var twilio = require('twilio');
+var sms = require("./sms.js");
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
