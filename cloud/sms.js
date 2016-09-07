@@ -2,7 +2,7 @@
 	封裝 sms service
 */
 
-var prop = require("cloud/app_properties.js");
+var prop = require("./app_properties.js");
 
 var twilio = require('twilio')(prop.twilio_sid(), prop.twilio_token());
 exports.send = function(phoneNoTo, msg) {
