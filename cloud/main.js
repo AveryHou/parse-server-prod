@@ -1,13 +1,19 @@
 require("./promotion_function.js");
 require("./login_function.js");
+require("./google_service.js"); 
+require("./db_trigger.js");
+require("./job_function.js");
+require("./store_management_function.js");
+require("./web.js");
+require("./storeapp-demo.js");
+require("./customer_service_management_function.js");
+require("./call-bee.js");
 
 var util = require("./util.js");
 var _ = require("underscore");
-//var Image = require("parse-image");
-
-
-var prop = require("./app_properties.js");
 var logger = require("./mail_service.js");
+//var Image = require("parse-image");
+var prop = require("./app_properties.js");
 
 
 
