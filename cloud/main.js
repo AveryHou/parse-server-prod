@@ -1,10 +1,16 @@
 require("./promotion_function.js");
-//require("./login_function.js");
+require("./login_function.js");
+
+var util = require("./util.js");
+var _ = require("underscore");
+var Image = require("parse-image");
+
 
 var prop = require("./app_properties.js");
 var logger = require("./mail_service.js");
 
-var sms = require("./sms.js");
+
+
 
 Parse.Cloud.define('hello', function(req, res) {
   res.success('Hello heroku');
