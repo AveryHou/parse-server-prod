@@ -18,6 +18,20 @@ var api = new ParseServer({
   masterKey: process.env.MASTER_KEY || 'myMasterKey', //Add your master key here. Keep it secret!
   serverURL: process.env.SERVER_URL || 'http://hbdevtest01.herokuapp.com/parse',  // Don't forget to change to https if needed
   fileKey: "3ccf8d1a-7407-4832-86cc-4ab5fab42f1c",
+  push: {
+      ios: [
+	      {
+	        pfx: __dirname + '/push-key/HungryBeeDriver-Dev-Certificates.p12', // Dev PFX or P12
+	        bundleId: 'net.hungrybee.HungryBee',
+	        production: false // Dev
+	      },
+	      {
+	        pfx: __dirname + '/push-key/HungryBee-Prod-Certificates.p12', // Prod PFX or P12
+	        bundleId: 'net.hungrybee.HungryBee',  
+	        production: true // Prod
+	      }
+	    ]
+    }
   liveQuery: {
     classNames: ["Posts", "Comments"] // List of classes to support for query subscriptions
   }
