@@ -31,7 +31,7 @@ var api = new ParseServer({
 	        production: true // Prod
 	      }
 	    ]
-    }
+    },
   liveQuery: {
     classNames: ["Posts", "Comments"] // List of classes to support for query subscriptions
   }
