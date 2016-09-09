@@ -181,8 +181,10 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 				  	error: function(error) {
 				    	console.error(JSON.stringify(error));
 				    	mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
-				  	}
-				});
+				  	}, 
+				  	useMasterKey: true
+				  }
+				);
 	    	},
 	    	error: function(err) {
 				logger.send_error(logger.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
@@ -213,7 +215,7 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 					    sound: "default",
 						badge: "Increment"
 				  	},
-				});
+				},{ useMasterKey: true});
 		}
 	}
 	console.log("============= END db_trigger.js afterSave HBShoppingCart =============");
@@ -309,7 +311,8 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 					    	console.error(JSON.stringify(error));
 					    	//mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
 					    	//response.error(error);
-					  	}
+					  	},
+					  	useMasterKey: true
 					});
 			    });
 		    }).then(function() {
