@@ -21,14 +21,9 @@ var api = new ParseServer({
   push: {
       ios: [
 	      {
-	        pfx: __dirname + '/push-key/HungryBeeDriver-Dev-Certificates.p12', // Dev PFX or P12
+	        pfx: __dirname + '/push-key/HBDEV-Certificates.p12', // Dev PFX or P12
 	        bundleId: 'net.hungrybee.HungryBee',
 	        production: false // Dev
-	      },
-	      {
-	        pfx: __dirname + '/push-key/HungryBee-Prod-Certificates.p12', // Prod PFX or P12
-	        bundleId: 'net.hungrybee.HungryBee',  
-	        production: true // Prod
 	      }
 	    ]
     },
