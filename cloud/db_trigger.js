@@ -414,6 +414,13 @@ Parse.Cloud.afterSave("HBStoreInCart", function(request) {
 							type: "foodTaken",
 							cartId: request.object.get("cart").id
 					  	},
+					},
+					{
+					 	success: function() {
+					    },
+					  	error: function(error) {
+					    },
+					  	useMasterKey: true
 					});
 					
 				var queryInstallation1 = new Parse.Query(Parse.Installation);
@@ -426,6 +433,13 @@ Parse.Cloud.afterSave("HBStoreInCart", function(request) {
 						    sound: "default",
 							badge: "Increment"
 					  	},
+					},
+					{
+					 	success: function() {
+					    },
+					  	error: function(error) {
+					    },
+					  	useMasterKey: true
 					});
 				return Parse.Promise.when(p1, p2);	
 			})
