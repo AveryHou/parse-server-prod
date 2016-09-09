@@ -1873,7 +1873,13 @@ Parse.Cloud.define("setOrderShipping", function(request, response) {
 						    sound: "default",
 							badge: "Increment"
 					  	},
-					}, {useMasterKey: true});
+					}, {
+						success: function() {
+					    },
+					  	error: function(error) {
+					    },
+					  	useMasterKey: true
+					  });
 				response.success(0);
 			} else {
 				response.success(result);

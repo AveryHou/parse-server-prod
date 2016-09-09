@@ -215,7 +215,13 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 					    sound: "default",
 						badge: "Increment"
 				  	},
-				},{ useMasterKey: true});
+				},{
+						success: function() {
+					    },
+					  	error: function(error) {
+					    },
+					  	useMasterKey: true
+					  });
 		}
 	}
 	console.log("============= END db_trigger.js afterSave HBShoppingCart =============");
