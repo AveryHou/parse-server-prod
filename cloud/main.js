@@ -2,7 +2,7 @@ require("./promotion_function.js");
 require("./login_function.js");
 require("./google_service.js"); 
 require("./db_trigger.js");
-require("./job_function.js");
+//require("./job_function.js");
 require("./store_management_function.js");
 require("./web.js");
 require("./storeapp-demo.js");
