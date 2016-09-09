@@ -2,7 +2,7 @@ require("./promotion_function.js");
 require("./login_function.js");
 require("./google_service.js"); 
 require("./db_trigger.js");
-//require("./job_function.js");
+require("./job_function.js");
 require("./store_management_function.js");
 require("./web.js");
 require("./storeapp-demo.js");
@@ -15,27 +15,7 @@ var logger = require("./mail_service.js");
 //var Image = require("parse-image");
 var prop = require("./app_properties.js");
 
-
-
-
-Parse.Cloud.define('hello', function(req, res) {
-  res.success('Hello heroku');
-});
-
-Parse.Cloud.define('testmail', function(req, res) {
-	var body = "<p>mail sent!!!</p>";
-	body += prop.order_info();
-	logger.send_notify(prop.admin_mail(), prop.mail_cc(), "hello mailgun", body);
-	res.success('Hello mail');
-});
-
-Parse.Cloud.define('testsms', function(req, res) {
-	sms.send("0919188224",  "I'm from heroku...");
-	res.success('Hello twilio');
-});
-
-
-//
+//取得所有店家
 Parse.Cloud.define("getFoodStore", function(request, response) {
 	var query = new Parse.Query("HBFoodStore");
 	query.equalTo("online", true);
@@ -105,7 +85,7 @@ Parse.Cloud.define("getFoodStoreCollection", function(request, response) {
   	});
 });
 
-//
+//取得店家有上架的餐點
 Parse.Cloud.define("getMealsOfFoodStore", function(request, response) {
 	var FoodStore = Parse.Object.extend("HBFoodStore");
 	var store = new FoodStore();
@@ -132,7 +112,7 @@ Parse.Cloud.define("getMealsOfFoodStore", function(request, response) {
 //
 Parse.Cloud.define("getSameLocationStore", function(request, response) {
 	
-	if(request.params.cartMode != null && request.params.cartMode == "join") { //
+	if(request.params.cartMode != null && request.params.cartMode == "join") { //團購模式
 		var query = new Parse.Query("HBProductivity");
 		query.equalTo("serviceOpen", true);
 		query.equalTo("sinceMidnight", request.params.sinceMidnight);
@@ -141,10 +121,10 @@ Parse.Cloud.define("getSameLocationStore", function(request, response) {
 		query.find()
 			.then(function(results) {
 				var stores = [];
-				console.log(":" + results.length);
+				console.log("時段符合的店家數:" + results.length);
 				var currentMD = util.currentDate();
-				var etaString = request.params.etaString; // formate: 8/8() 13:45
-				console.log(":" + etaString + ",:" + request.params.locationGroup);
+				var etaString = request.params.etaString; // formate: 8/8(四) 13:45
+				console.log("送餐時間:" + etaString + ",區域:" + request.params.locationGroup);
 	     		var idx = etaString.indexOf("(");
 	     		var isToday = "No";
 				if (currentMD == etaString.substring(0, idx)) {
@@ -155,39 +135,41 @@ Parse.Cloud.define("getSameLocationStore", function(request, response) {
 		      		var storeObj = results[i].get("store");
 		      		//exclude self
 		      		if (storeObj.id == request.params.storeId) {
-		      			console.log(":" + storeObj.get("storeName"));
+		      			console.log("自己不算:" + storeObj.get("storeName"));
 		      			continue;	
 		      		}
 		      		
-		      		//
+		      		//不同區，不能併單
 		      		if (storeObj.get("locationGroup") != request.params.locationGroup) {
-		      			console.log(":" + storeObj.get("storeName"));
+		      			console.log("不同區:" + storeObj.get("storeName"));
 		      			continue;
 		      		}
 		      		
-		      		if (isToday == "Yes") { //
-		      			//
+		      		if (isToday == "Yes") { //當日訂單
+		      			//需提前一天預約，不能併單
 		      			if (storeObj.get("reservationUnit") == "day") {
-		      				console.log(":" + storeObj.get("storeName"));
+		      				console.log("需提前天預約:" + storeObj.get("storeName"));
 			      			continue;
 			      		}
 			      		
-			      		//N
+			      		//需提前N分鐘
 			      		if (storeObj.get("reservationUnit") == "minute") {
-			      			//
+			      			//目前時間與訂單時間差距是否足夠
+			      			var currentDate = new Date();
 			      			var currentMinutesFromMidnight = (currentDate.getHours() + 8) * 60 + currentDate.getMinutes();
-			      			var diff = sinceMidnight - currentMinutesFromMidnight; 
+			      			var diff = request.params.sinceMidnight - currentMinutesFromMidnight; 
 			      			if (diff < storeObj.get("reservation")) {
-			      				console.log(":" + storeObj.get("storeName"));
+			      				console.log("需提前分鐘預約:" + storeObj.get("storeName"));
 			      				continue;	
 			      			}
 			      		}
 		      		}
 		      		
-		      		//
-		      		//if (storeObj.get("onhold") == "breaking" || storeObj.get("onhold") == "busy") {
-		      		//	continue;
-		      		//}
+		      		//休息中或尖峰時段的店家不能併單
+		      		if (storeObj.get("onhold") == "breaking" || storeObj.get("onhold") == "busy" || storeObj.get("online") == false) {
+		      			console.log("不提供營業:" + storeObj.get("storeName"));
+		      			continue;
+		      		}
 		      		
 		      		stores.push(storeObj);	
 		      	}
@@ -195,32 +177,34 @@ Parse.Cloud.define("getSameLocationStore", function(request, response) {
 	      	})
 	    	.then(
 	    		function(stores) {
-	    			var cweek = ["()","()","()","()","()","()","()"];
+	    			console.log("通過第一階段篩選條件，剩餘店家數:" + stores.length);
+	    			var cweek = ["(日)","(一)","(二)","(三)","(四)","(五)","(六)"];
 	    			var eweek = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-	    			var tempETA = request.params.etaString; // formate: 8/8() 13:45
+	    			var tempETA = request.params.etaString; // formate: 8/8(四) 13:45
 		     		var tempDayOfWeek = "";
 		     		var leftIdx = tempETA.indexOf("(");
 		     		var rightIdx = tempETA.indexOf(")");
 		     		var tempDay = tempETA.substring(leftIdx, rightIdx + 1);
 					var dayOfWeek = eweek[cweek.indexOf(tempDay)];
-	    			
+	    			console.log("再找出:" + dayOfWeek + " 有營業的店家");
 	    			var queryBiz = new Parse.Query("HBStoreBusinessDate");
 					queryBiz.equalTo(dayOfWeek, true);
 					queryBiz.include("store");
 			      	queryBiz.find({
 						success: function(bizFound) {
 					  	  	var resultSet = [];
-					      	for (var i=0 ; i<stores.length ; i++) {
+					  	  	for (var i=0 ; i<stores.length ; i++) {
 					      		var outerStore = stores[i];
-						      	for (var j=0 ; j<bizFound.length ; j++) {
+					      		for (var j=0 ; j<bizFound.length ; j++) {
 						      		var innerStore = bizFound[j].get("store");
 						      		if (outerStore.id == innerStore.id) {
+						      			console.log("可一起點:" + outerStore.get("storeName"));
 						      			resultSet.push(outerStore);
 						      			break;
 						      		}
 						      	}
 						    }
-						    console.log(":" + resultSet.length);
+						    console.log("可一起點店家數:" + resultSet.length);
 				      		response.success(resultSet);
 				      	},
 				      	error: function(err) {
@@ -238,7 +222,7 @@ Parse.Cloud.define("getSameLocationStore", function(request, response) {
 		var query = new Parse.Query("HBFoodStore");
 		query.equalTo("locationGroup", request.params.locationGroup);
 		query.equalTo("online", true);
-		//if(request.params.cartMode != null && request.params.cartMode == "join") { //, 
+		//if(request.params.cartMode != null && request.params.cartMode == "join") { //團購模式, 先排除休息的店家
 			query.notContainedIn("onhold", ["breaking"]);  	
 		//}
 		query.notEqualTo("objectId", request.params.storeId); //exclude self
@@ -255,7 +239,7 @@ Parse.Cloud.define("getSameLocationStore", function(request, response) {
 	} 
 });
 
-//
+//取得店家可供餐的時間
 Parse.Cloud.define("getStoreBusinessDateThisWeek", function(request, response) {
 	
 	var FoodStore = Parse.Object.extend("HBFoodStore");
@@ -280,7 +264,7 @@ Parse.Cloud.define("getStoreBusinessDateThisWeek", function(request, response) {
   	});
 });
 
-//
+//店家備餐時間區間設定值
 Parse.Cloud.define("getStoreTimeSlot", function(request, response) {
 	var currentTime = new Date();
 	var subQuery = new Parse.Query("HBTimeSlot");
@@ -308,7 +292,7 @@ Parse.Cloud.define("getStoreTimeSlot", function(request, response) {
 });
 
 
-//
+//取得個人購物車
 Parse.Cloud.define("createShoppingCart", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.equalTo("owner", request.user);
@@ -326,7 +310,7 @@ Parse.Cloud.define("createShoppingCart", function(request, response) {
 					success: function(cartCreated){
 						console.log("create shopping cart:" + cartCreated.id);
 						
-						// Line 
+						//產生短網址，之後開啟 Line 團購模式會用到
 						var originalUrl = prop.shorten_url() + "/agent.html?cart=" + cartCreated.id + "&owner=" + cartCreated.get("owner").id;
 						//console.log("originalUrl:" + originalUrl);
 										
@@ -349,7 +333,7 @@ Parse.Cloud.define("createShoppingCart", function(request, response) {
 				});
 				
     		} else { //
-    			response.success(cartFound[0]); //in shopping idx[0]
+    			response.success(cartFound[0]); //in shopping狀態只會有一筆，所以取 idx[0]
     		}
   		},
   		function(err) {
@@ -384,7 +368,7 @@ Parse.Cloud.define("getShoppingCartContents", function(request, response) {
   	);
 });
 
-//
+//購物車內容
 Parse.Cloud.define("shoppingCartContentsGroupByStore", function(request, response) {
 	var subQuery = new Parse.Query("HBShoppingCart");
 	subQuery.equalTo("objectId",  request.params.cartId);
@@ -493,13 +477,13 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 		    	var bags = request.params.bags;
 		    	var unitPrice = request.params.price;
 		    	if (shoppingItemsFound.length > 0) {
-		    		if (request.params.fromTextField == "YES") { //(app approved)
+		    		if (request.params.fromTextField == "YES") { //從購物車手動輸入修改數量(待app approved後再更新)
 		    			//do nothing
 		    		} else {
-		    			qty += shoppingItemsFound[0].get("qty"); //
+		    			qty += shoppingItemsFound[0].get("qty"); //累加
 		    		}
 					shoppingItemsFound[0].set("qty", qty);
-			        shoppingItemsFound[0].set("bags", eval(new Number(qty * bags).toFixed(2))); //
+			        shoppingItemsFound[0].set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
 			        shoppingItemsFound[0].set("unitPrice", unitPrice);
 			        shoppingItemsFound[0].set("subTotal", qty * unitPrice);
      				shoppingItemsFound[0].save(null,{
@@ -522,7 +506,7 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        var item = new HBShoppingItem();
 			        item.set("shoppingCart", cart);
 			        item.set("qty", qty);
-			        item.set("bags", eval(new Number(qty * bags).toFixed(2))); //
+			        item.set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
 			        item.set("unitPrice", unitPrice);
 			        item.set("subTotal", qty * unitPrice);
 			        item.set("owner", request.user);
@@ -532,7 +516,7 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        
 			        var displayName = "";
 			        if (request.params.foodSize != null && request.params.foodSize != "") {
-			        	displayName += (request.params.foodSize == SMALL_FOOD) ? "" : "";
+			        	displayName += (request.params.foodSize == SMALL_FOOD) ? "小" : "大";
 			        	displayName += ",";
 			        	item.set("foodSize", request.params.foodSize);
 			        }
@@ -543,7 +527,7 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        }
 			        
 			        if (request.params.coldHot != null && request.params.coldHot != "") {
-			        	displayName += (request.params.coldHot == COLD_DRINK) ? "" : "";
+			        	displayName += (request.params.coldHot == COLD_DRINK) ? "冷" : "熱";
 			        	displayName += ",";
 			        	item.set("coldHot", request.params.coldHot);
 			        }
@@ -551,11 +535,11 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        if ((request.params.coldHot == "" || request.params.coldHot == COLD_DRINK) &&
 			        	request.params.iceLevel != null && request.params.iceLevel != "") {
 			        	if (request.params.iceLevel == ICE_NONE) {
-			        		displayName += "";
+			        		displayName += "去冰";
 			        	} else if  (request.params.iceLevel == ICE_LITTLE) {
-			        		displayName += "";
+			        		displayName += "少冰";
 			        	} else if  (request.params.iceLevel == ICE_NORMAL) {
-			        		displayName += "";
+			        		displayName += "正常冰";
 			        	}
 						displayName += ",";
 						item.set("iceLevel", request.params.iceLevel);
@@ -563,15 +547,15 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        
 			        if (request.params.sugarLevel != null && request.params.sugarLevel != "") {
 			        	if (request.params.sugarLevel == SUGAR_NONE) {
-			        		displayName += "";
+			        		displayName += "無糖";
 			        	} else if  (request.params.sugarLevel == SUGAR_LITTLE) {
-			        		displayName += "1/3";
+			        		displayName += "1/3糖";
 			        	} else if  (request.params.sugarLevel == SUGAR_HALF) {
-			        		displayName += "1/2";
+			        		displayName += "1/2糖";
 			        	} else if  (request.params.sugarLevel == SUGAR_NORMAL) {
-			        		displayName += "2/3";
+			        		displayName += "2/3糖";
 			        	} else if  (request.params.sugarLevel == SUGAR_FULL) {
-							displayName += "";
+							displayName += "全糖";
 			        	}
 							displayName += ",";
 							item.set("sugarLevel", request.params.sugarLevel);
@@ -579,13 +563,13 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        
 			        if (request.params.spicyLevel != null && request.params.spicyLevel != "") {
 			        	if (request.params.spicyLevel == SPICY_NONE) {
-			        		displayName += "";
+			        		displayName += "不辣";
 			        	} else if  (request.params.spicyLevel == SPICY_LITTLE) {
-			        		displayName += "";
+			        		displayName += "小辣";
 			        	} else if  (request.params.spicyLevel == SPICY_HALF) {
-			        		displayName += "";
+			        		displayName += "中辣";
 			        	} else if  (request.params.spicyLevel == SPICY_NORMAL) {
-			        		displayName += "";
+			        		displayName += "大辣";
 			        	}	
 						displayName += ",";
 						item.set("spicyLevel", request.params.spicyLevel);
@@ -593,9 +577,9 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 			        
 			        if (request.params.needPepper != null && request.params.needPepper != "") {
 			        	if (request.params.needPepper == PEPPER_NONE) {
-			        		displayName += "";
+			        		displayName += "不加胡椒";
 			        	} else if  (request.params.needPepper == PEPPER_NORMAL) {
-			        		displayName += "";
+			        		displayName += "加胡椒";
 			        	}
 						displayName += ",";
 						item.set("needPepper", request.params.needPepper);
@@ -708,7 +692,7 @@ Parse.Cloud.define("updateShoppingCart", function(request, response) {
 		        item.set("store", store);
 		        item.set("meal", meal);
 				item.set("addFrom", "self");
-				item.set("bags", eval(new Number(qty * bags).toFixed(2))); //
+				item.set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
 		        itemArray.push(item);
 		    }
 		
@@ -798,7 +782,7 @@ Parse.Cloud.define("updateShoppingCartFromLine", function(request, response) {
 });
 */
 
-//
+//離開團購
 Parse.Cloud.define("quitGroupBuy", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
     var cart = new HBShoppingCart();
@@ -834,7 +818,7 @@ Parse.Cloud.define("quitGroupBuy", function(request, response) {
   	});
 });
 
-//
+//確定如入團購
 Parse.Cloud.define("didJoinGroupBuy", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
     query.get(request.params.cartId, {
@@ -870,13 +854,13 @@ Parse.Cloud.define("getGroupBuyFollowers", function(request, response) {
     query.include("store");
     query.include("meal");
     query.include("shoppingCart");
-    query.descending("addFrom"); //owner
+    query.descending("addFrom"); //owner放第一個
     query.find({
     	success: function(itemsFound) {
     		var results = shoppingItemGroupByFollower(itemsFound);
     		
-    		//results[0]: 
-    		//results[1]: 
+    		//results[0]: 跟團人員
+    		//results[1]: 每個跟團人員的購買項目
     		
     		
     		
@@ -914,7 +898,7 @@ Parse.Cloud.define("getStoreId", function(request, response) {
   	});
 });
 
-//
+//團購是否關閉
 Parse.Cloud.define("isGroupBuyClosed", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
     query.equalTo("objectId", request.params.cartId);
@@ -934,7 +918,7 @@ Parse.Cloud.define("isGroupBuyClosed", function(request, response) {
   	});
 });
 
-//
+//計算運費
 Parse.Cloud.define("getShippingFee", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
     var cart = new HBShoppingCart();
@@ -947,7 +931,7 @@ Parse.Cloud.define("getShippingFee", function(request, response) {
     query.find({
     	success: function(itemsFound) {
     		var storeId = [];
-    		var totalFoodPrice = 0; //
+    		var totalFoodPrice = 0; //全部餐費
     		for(var i=0 ; i<itemsFound.length ; i++) {
     			var oneItem = itemsFound[i];
     			var store = oneItem.get("store").id;
@@ -965,7 +949,7 @@ Parse.Cloud.define("getShippingFee", function(request, response) {
 		    Parse.Config.get().then(function(config) {
 		  		var shippingFee = config.get("shipping_fee");
 		  		//if (storeId.length > 1) {
-		  		//	shippingFee += 20 * (storeId.length - 1); // $20()
+		  		//	shippingFee += 20 * (storeId.length - 1); //每多一個店家，運費多 $20(暫不上線)
 		  		//}
 		  		
 		  		if (eval(subTotal) >= 888) {
@@ -988,10 +972,10 @@ Parse.Cloud.define("getShippingFee", function(request, response) {
   	});
 });
 
-//
+//取得折扣金額
 Parse.Cloud.define("getCouponPrice", function(request, response) {
-	if (request.params.couponId != null && request.params.couponId.toLowerCase() == "hungrybee") {
-		response.success(-65);
+	if (request.params.couponId != null && request.params.couponId.toLowerCase() == "newbee") {
+		response.success(0);
 	} else {
 		var query = new Parse.Query("HBCoupon");
 		query.notEqualTo("used", true);
@@ -1007,7 +991,7 @@ Parse.Cloud.define("getCouponPrice", function(request, response) {
 	}
 });
 
-//
+//取得折扣
 Parse.Cloud.define("getCoupons", function(request, response) {
 	var query = new Parse.Query("HBCoupon");
 	query.notEqualTo("used", true);
@@ -1024,8 +1008,8 @@ Parse.Cloud.define("getCoupons", function(request, response) {
 });
 
 
-//
-//QRCode. see submitQRCode
+//送出購物車
+//送出後，再產生QRCode. see submitQRCode
 Parse.Cloud.define("submitShoppingCart", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.get(request.params.cartId, {
@@ -1039,7 +1023,7 @@ Parse.Cloud.define("submitShoppingCart", function(request, response) {
 		    		var subTotalPrice = 0;
 		    		var totalQty = 0;
 		    		
-		    		//
+		    		//產生訂單編號及小計
 		    		var storeObjArray = [];
 		    		var storeIdArray = [];
 		    		var storeBags = [];
@@ -1071,15 +1055,15 @@ Parse.Cloud.define("submitShoppingCart", function(request, response) {
 						address.id = request.params.sendToId;
 			     	}
 		     	
-		     		var tempETA = request.params.ETA; // formate: 8/8() 13:45
+		     		var tempETA = request.params.ETA; // formate: 8/8(四) 13:45
 		     		if (tempETA != null && tempETA != "") {
 		     			var tempDay = tempETA.substring(0, tempETA.indexOf("("));
 						var tempSlot = tempETA.substring(tempETA.indexOf(" ") + 1);
 						var eta = new Date(new Date().getFullYear() + "/" + tempDay + " " + tempSlot);
-						eta.setMinutes(eta.getMinutes() - 480); //  UTC 
+						eta.setMinutes(eta.getMinutes() - 480); // 轉換成 UTC 時間
 								
 						var etd = new Date(eta);
-						//305
+						//送達時間前30分鐘設為取餐時間，每多一個店家多5分鐘
 						etd.setMinutes(eta.getMinutes() - 30 - ((orderNoPrefix.length-1) * 5));
 		     		}
 		     		
@@ -1094,7 +1078,7 @@ Parse.Cloud.define("submitShoppingCart", function(request, response) {
 		 		    cartFound.set("couponNo", request.params.couponNo);
 		 		    cartFound.set("needTaxId", request.params.needTaxId);
 		 		    cartFound.set("taxId", request.params.taxId);
-		 		    cartFound.set("payToBee", 130+((orderNoPrefix.length-1) * 15)); //130 
+		 		    cartFound.set("payToBee", 130+((orderNoPrefix.length-1) * 15)); //130 起跳
 		 		    cartFound.set("addressNote", request.params.addressNote); 
 		 		    
 		 		    if (request.params.userEmail != "") {
@@ -1154,9 +1138,9 @@ Parse.Cloud.define("submitShoppingCart", function(request, response) {
 						        item.set("store", storeObjArray[i]);
 						        item.set("foodTaken", false);
 						        item.set("replied", false);
-						        item.set("bags", Math.ceil(storeBags[i])); //
+						        item.set("bags", Math.ceil(storeBags[i])); //無條件進位
 		        
-						        //todo. , Avery . 160621
+						        //todo. 之後再依實際載具運算, Avery . 160621
 						        var bagSize = "S";
 						        if (Math.ceil(storeBags[i]) > 5) {
 						        	bagSize = "L";
@@ -1184,34 +1168,34 @@ Parse.Cloud.define("submitShoppingCart", function(request, response) {
 						 		    
 						 		    currentUser.save(null, {
 						        		success: function(userUpdated) {
-						        			var subject = userUpdated.get("contact") + " : " + cartFound.id;
+						        			var subject = userUpdated.get("contact") + " 送出新訂單: " + cartFound.id;
 						        			var sDate = cartFound.get("submittedDate");
 						        			
-						        			var body = ": " + userUpdated.get("contact") + ", " + userUpdated.get("phone") + "<BR>";
+						        			var body = "訂購人: " + userUpdated.get("contact") + ", " + userUpdated.get("phone") + "<BR>";
 						        			body += "email: " + userUpdated.get("userEmail") + "<BR><BR>";
-						        			body += ": " + cartFound.id + "<BR>";
-						        			body += ": " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
+						        			body += "訂單編號: " + cartFound.id + "<BR>";
+						        			body += "訂單產生時間: " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
 						        			
-						        			body += ": " + tempETA + "<BR>";
-						        			body += ": " + request.params.address + "<BR>";
-						        			body += ": " + request.params.addressNote + "<BR><BR>";
+						        			body += "餐點預計送達時間: " + tempETA + "<BR>";
+						        			body += "送餐地址: " + request.params.address + "<BR>";
+						        			body += "送餐備註: " + request.params.addressNote + "<BR><BR>";
 						        			
-						        			body += ": $" + subTotalPrice + "<BR>";
-						        			body += ": $" + cartFound.get("shippingFee") + "<BR>";
+						        			body += "餐費: $" + subTotalPrice + "<BR>";
+						        			body += "運費: $" + cartFound.get("shippingFee") + "<BR>";
 						        			
 						        			if (cartFound.get("couponNo") != "") {
-						        				body += ": $" + cartFound.get("discount") + " (: " + cartFound.get("couponNo") + ")<BR>";
+						        				body += "折價金額: $" + cartFound.get("discount") + " (折價卷: " + cartFound.get("couponNo") + ")<BR>";
 						        			} else {
-						        				body += ": $0 ()<BR>";
+						        				body += "折價金額: $0 (未使用折價卷)<BR>";
 						        			}
 						        			
-						        			body += ": <font color=blue>$" + cartFound.get("totalPrice") + "</font><BR>";
-						        			body += ": " + cartFound.get("allPayNo") + "<BR><BR>";
+						        			body += "刷卡金額: <font color=blue>$" + cartFound.get("totalPrice") + "</font><BR>";
+						        			body += "歐付寶交易序號: " + cartFound.get("allPayNo") + "<BR><BR>";
 						        			body += prop.order_info() + "?objectId=" + cartFound.id;
 						        			
 						        			logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
 						        			
-						        			//
+						        			//計算出較精準的到店取餐時間
 						        			Parse.Cloud.run("calculateETD", 
 						        							{cartId: cartFound.id}, 
 						        							{
@@ -1303,7 +1287,7 @@ Parse.Cloud.define("getOnBidToday", function(request, response) {
 //
 Parse.Cloud.define("getCartByStatus", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
-	query.equalTo("deliveryOrder", true); //
+	query.equalTo("deliveryOrder", true); //只取外送單
 	query.containedIn("status", request.params.status);
 	if (request.params.scope == "private") {
 		query.equalTo("bee", request.user);
@@ -1326,7 +1310,7 @@ Parse.Cloud.define("getCartByStatus", function(request, response) {
 	  	});
 });
 
-//
+//取得個人運送中的訂單
 Parse.Cloud.define("getTodoToday", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.equalTo("status", "ongoing");
@@ -1477,7 +1461,7 @@ Parse.Cloud.define("deleteUserAddressBook", function(request, response) {
 	});
 });
 
-//
+//依訂單狀態取訂單
 Parse.Cloud.define("getOrderByStatus", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.containedIn("status", request.params.status);
@@ -1494,7 +1478,7 @@ Parse.Cloud.define("getOrderByStatus", function(request, response) {
   	});
 });
 
-//
+//取得待標訂單
 Parse.Cloud.define("getOrderOnBid", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.containedIn("status", "onbid");
@@ -1559,7 +1543,7 @@ Parse.Cloud.define("copyMyOrder", function(request, response) {
 });
 
 
-// ,  ShoppingItem, client  UI 
+// 取得訂單明細, 回傳 ShoppingItem, client 要自行處理 UI 呈現
 Parse.Cloud.define("getOrderDetail", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
 	var cart = new HBShoppingCart();
@@ -1583,7 +1567,7 @@ Parse.Cloud.define("getOrderDetail", function(request, response) {
   	});
 });
 
-// ,group by
+// 取得訂單明細,用店家group by
 Parse.Cloud.define("getOrderDetailOrderByStore", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
 	var cart = new HBShoppingCart();
@@ -1627,7 +1611,7 @@ Parse.Cloud.define("getOrderDetailOrderByStore", function(request, response) {
   	});
 });
 
-//
+//回傳小蜜蜂目前位置
 Parse.Cloud.define("updateBeeLocation", function(request, response) {
 	if (request.params.orderId != null) {
 		var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
@@ -1734,7 +1718,7 @@ Parse.Cloud.define("getOrderOnBidDetail", function(request, response) {
   	});
 });
 
-//
+//下標
 Parse.Cloud.define("bidOnOrder", function(request, response) {
 	
 	var query = new Parse.Query("HBShoppingCart");
@@ -1769,7 +1753,7 @@ Parse.Cloud.define("bidOnOrder", function(request, response) {
 								if (userFound) {
 									userFound.set("delivering", true);
 									userFound.save();
-									logger.send_notify(prop.mail_cc(), "", "[]" + request.user.getUsername() + " " + request.user.get("contact"), ":" + cartUpdated.id);
+									logger.send_notify(prop.mail_cc(), "", "[搶標成功]" + request.user.getUsername() + " " + request.user.get("contact"), "訂單:" + cartUpdated.id);
 						
 									response.success("Yes");	
 								} else {
@@ -1783,7 +1767,7 @@ Parse.Cloud.define("bidOnOrder", function(request, response) {
 							}
 						);
 	     			} else {
-	     				logger.send_notify(prop.mail_cc(), "", "[]" + request.user.getUsername() + " " + request.user.get("contact"), ":" + cartUpdated.id);
+	     				logger.send_notify(prop.mail_cc(), "", "[搶標失敗]" + request.user.getUsername() + " " + request.user.get("contact"), "訂單:" + cartUpdated.id);
 						response.success("Too Late");
 	     			}
 				},
@@ -1800,7 +1784,7 @@ Parse.Cloud.define("bidOnOrder", function(request, response) {
 	});
 });
 
-//
+//更新購物車狀態為送餐中
 Parse.Cloud.define("setOrderShipping", function(request, response) {
 	
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
@@ -1847,23 +1831,23 @@ Parse.Cloud.define("setOrderShipping", function(request, response) {
 		console.log("update StoreInCart:" + dataFound[0].get("store").get("storeName"));
 		dataFound[0].set("foodTaken", true);
 		
-		var msgsubject = "[]";
+		var msgsubject = "[完成取餐掃描]";
 		if(request.user != null) {
 			msgsubject += request.user.getUsername() + " " + request.user.get("contact") + "," + dataFound[0].get("store").get("storeName");
 		} else {
-			msgsubject += " by ";
+			msgsubject += " by 客服";
 		}
 		
-		logger.send_notify("", prop.mail_cc(), msgsubject, ":" + request.params.cartId);
+		logger.send_notify("", prop.mail_cc(), msgsubject, "訂單:" + request.params.cartId);
 		return Parse.Promise.when(dataFound[0].save());
 	})
 	.then(function (storeInCartUpdated){
 		return Parse.Promise.when(queryNotTaken.find(), storeInCartUpdated);
 	})
 	.then(function(results, storeInCartUpdated) {
-			console.log(":" + results.length + "");
-			if(results.length == 0) { //
-				logger.send_info(prop.admin_mail(), prop.mail_cc(), "[]:" + request.params.cartId, "", request.params.cartId);
+			console.log("未取餐數:" + results.length + "家");
+			if(results.length == 0) { //全取
+				logger.send_info(prop.admin_mail(), prop.mail_cc(), "[所有餐點取餐完畢]:" + request.params.cartId, "小蜜蜂進行運送", request.params.cartId);
 				
 				var cart = storeInCartUpdated.get("cart");
 				cart.set("status", "shipping");
@@ -1884,8 +1868,8 @@ Parse.Cloud.define("setOrderShipping", function(request, response) {
 						where: queryInstallation,
 						push_time: pushSent,
 						data: {
-						  	title: "HungryBee",
-						    alert: ":" + cart.id,
+						  	title: "HungryBee美食外送",
+						    alert: "所有餐點取餐完畢，外送人員前往目的地中。訂單:" + cart.id,
 						    sound: "default",
 							badge: "Increment"
 					  	},
@@ -1952,7 +1936,7 @@ Parse.Cloud.define("setOrderStatus", function(request, response) {
 						cartFound.set("completeDate", new Date());
 						cartFound.save(null,{
 							success: function(cartUpdated){
-								logger.send_notify("", prop.mail_cc(), "[] :" + request.params.cartId, "good job.");
+								logger.send_notify("", prop.mail_cc(), "[已完成送餐] 訂單:" + request.params.cartId, "good job.");
 								var HBCustomerInCart = Parse.Object.extend("HBCustomerInCart");
 				                var customerInCartQuery = new Parse.Query(HBCustomerInCart);
 				                customerInCartQuery.equalTo('cart', Parse.Object.extend("HBShoppingCart").createWithoutData(request.params.cartId));
@@ -1981,7 +1965,7 @@ Parse.Cloud.define("setOrderStatus", function(request, response) {
 					cartFound.set("status", request.params.status);
 					cartFound.save(null,{
 						success: function(cartUpdated){
-							logger.send_notify("", prop.mail_cc(), "[]" + request.user.getUsername() + " " + request.user.get("contact") + "," + request.params.storeName, ":" + cartUpdated.id);
+							logger.send_notify("", prop.mail_cc(), "[進行運送中]" + request.user.getUsername() + " " + request.user.get("contact") + "," + request.params.storeName, "訂單:" + cartUpdated.id);
 							response.success(cartUpdated);
 						},
 						error: function(err) {
@@ -2146,7 +2130,7 @@ Parse.Cloud.define("saveShoppingCart", function(request, response) {
 });
 
 
-//
+//取得教育練時程
 Parse.Cloud.define("getTrainingSchedule", function(request, response) {
 	var query = new Parse.Query("HBTrainingSchedule");
 	query.equalTo("enable", true);
@@ -2161,7 +2145,7 @@ Parse.Cloud.define("getTrainingSchedule", function(request, response) {
   	});
 });
 
-//
+//儲存預約
 Parse.Cloud.define("saveBookingInfo", function(request, response) {
 	var query = new Parse.Query(Parse.User);
 	query.equalTo('username', "driver-" + request.params.phoneNo);	
@@ -2173,7 +2157,7 @@ Parse.Cloud.define("saveBookingInfo", function(request, response) {
 				userFound.set("contact", request.params.contactName);
 				userFound.set("delivering", false);
 				userFound.set("qualify", false);
-				userFound.set("licenseNo", request.params.licenseNo + ""); // save error.
+				userFound.set("licenseNo", request.params.licenseNo + ""); //加空字串避免全數字，造成 save error.
 				userFound.set("email", request.params.email);
 				userFound.set("applyBee", "applying");	
 				userFound.save(null,{
@@ -2254,7 +2238,7 @@ Parse.Cloud.define("saveBookingInfo", function(request, response) {
 	
 });
 
-//
+//送出小蜜蜂預約單
 Parse.Cloud.define("submitBooking", function(request, response) {
 	var query = new Parse.Query("HBTrainingBooking");
 	query.equalTo("objectId", request.params.bookingId);
@@ -2263,7 +2247,7 @@ Parse.Cloud.define("submitBooking", function(request, response) {
 		function(bookingFound) {
 			if (bookingFound) {
 				var user = bookingFound.get("user");
-				user.set("applyBee", "applied"); // applying  applied
+				user.set("applyBee", "applied"); //狀態從 applying 變成 applied
 				user.set("beePoints", 10);
 				user.save();
 				
@@ -2287,7 +2271,7 @@ Parse.Cloud.define("submitBooking", function(request, response) {
 		});
 });
 
-//
+//取得小蜜蜂照片資料
 Parse.Cloud.define("getDriverInfoPhoto", function(request, response) {
 	var query = new Parse.Query("HBLob");
 	query.containedIn("category", request.params.category);
@@ -2309,8 +2293,8 @@ Parse.Cloud.define("Logger", function(request, response) {
 });
 
 
-//
-// [, , ]
+//取得送達時段
+//回傳 [日期, 可選時段, 今日可選時段]
 Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 	
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
@@ -2322,7 +2306,7 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 	itemQuery.include("store");
 	itemQuery.find({
 		success:function(itemFound) {
-			var itemObj = itemFound[0]; //
+			var itemObj = itemFound[0]; //只取其中一家店
 			var storeObj = itemObj.get("store");
 			
 			//find biz date
@@ -2333,7 +2317,7 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 			
 			var currentTime = new Date();
 	
-			//+60
+			//目前的時間+60分鐘訂為可開始訂餐時間
 			var minSlot = (currentTime.getHours() + 8) * 60 + currentTime.getMinutes() + 60;
 			console.log(currentTime + ", minSlot:" + minSlot);
 			
@@ -2365,7 +2349,7 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 		    				bizDate.push(bizDateObj.get("Sat"));
 		    				*/
 		    				
-		    				// Sat, Sun 
+		    				//暫時將 Sat, Sun 都設為不營業
 		    				bizDate.push(false);	//"Sun"
 		    				bizDate.push(true);     //"Mon"
 		    				bizDate.push(true);     //"Tue"
@@ -2379,9 +2363,9 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 		    				for(var i=0 ; i<dataFound.length ; i++) {
 		    					var obj = dataFound[i];
 		    					var reservationUnit = obj.get("store").get("reservationUnit");
-		    					if(reservationUnit == "day") { //
+		    					if(reservationUnit == "day") { //只能提前一天預約的店家，不顯示今日的時段選項
 		    						break;
-		    					} else if(reservationUnit == "minute") { //N
+		    					} else if(reservationUnit == "minute") { //只能提前N小時預約的店家
 		    						var slotExtend = obj.get("store").get("reservation");
 		    						if (obj.get("sinceMidnight") > minSlot + slotExtend) {
 			    						availableSlotForToday.push(obj);
@@ -2418,10 +2402,10 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 });
 
 //
-//
-//4
+//開放預約單，送達時間能顯示未來的日期
+//暫時先取4天
 function availableBizDate(bizDate) {
-	var weekstring = ["()","()","()","()","()","()","()"];
+	var weekstring = ["(日)","(一)","(二)","(三)","(四)","(五)","(六)"];
 	//var bizDate = [true, true, true, false, true, true, false]; 
 	var availableDate = [];
 	
@@ -2429,20 +2413,20 @@ function availableBizDate(bizDate) {
 	var counter = 0;
 	while(true) {
 		var futureTime = new Date(currentTime);
-		futureTime.setDate(futureTime.getDate() + counter); //
-		if (bizDate[futureTime.getDay()]) { //
+		futureTime.setDate(futureTime.getDate() + counter); //累加一天
+		if (bizDate[futureTime.getDay()]) { //有營業才取
 			availableDate.push((futureTime.getMonth()+1) + "/" + futureTime.getDate() + weekstring[futureTime.getDay()]);
 		}
-		if (availableDate.length == 4) break; //4
+		if (availableDate.length == 4) break; //先取4天
 		counter++;
 	}
 	return availableDate;
 }
 
 //
-//
-//
-//4
+//平台營業日
+//開放預約單，送達時間能顯示未來的日期
+//暫時先取4天
 //
 Parse.Cloud.define("availableBizDateOption", function(request, response) {
 	var bizDate = [];
@@ -2454,7 +2438,7 @@ Parse.Cloud.define("availableBizDateOption", function(request, response) {
 	bizDate.push(true);     //"Fri"
 	bizDate.push(true);    //"Sat"
 	
-	var weekstring = ["()","()","()","()","()","()","()"];
+	var weekstring = ["(日)","(一)","(二)","(三)","(四)","(五)","(六)"];
 	var e_weekstring = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 	var availableDate = [];
 	var availableDayOfWeek = [];
@@ -2463,8 +2447,8 @@ Parse.Cloud.define("availableBizDateOption", function(request, response) {
 	var counter = 0;
 	while(true) {
 		var futureTime = new Date(currentTime);
-		futureTime.setDate(futureTime.getDate() + counter); //
-		if (bizDate[futureTime.getDay()]) { //
+		futureTime.setDate(futureTime.getDate() + counter); //累加一天
+		if (bizDate[futureTime.getDay()]) { //有營業才取
 			var dateObj = {};
 			dateObj.c_value = (futureTime.getMonth()+1) + "/" + futureTime.getDate() + weekstring[futureTime.getDay()];
 			dateObj.e_value = e_weekstring[futureTime.getDay()];
@@ -2472,13 +2456,13 @@ Parse.Cloud.define("availableBizDateOption", function(request, response) {
 			availableDate.push(dateObj);
 			//availableDate.push((futureTime.getMonth()+1) + "/" + futureTime.getDate() + weekstring[futureTime.getDay()]);
 		}
-		if (availableDate.length == 4) break; //4
+		if (availableDate.length == 4) break; //先取4天
 		counter++;
 	}
 	response.success(availableDate);
 });
 
-//
+//設定可結帳時間
 Parse.Cloud.define("saveCheckoutLimit", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.get(request.params.cartId, {
@@ -2510,7 +2494,7 @@ Parse.Cloud.define("saveCheckoutLimit", function(request, response) {
 	});
 });
 
-// QRCode
+//儲存 QRCode
 Parse.Cloud.define("submitQRCode", function(request, response) {
 	Parse.Cloud.useMasterKey();
 	var query = new Parse.Query("HBShoppingCart");
@@ -2534,7 +2518,7 @@ Parse.Cloud.define("submitQRCode", function(request, response) {
 						
 						
 						/*
-						//
+						//完成訂單送出後，透過雲端列印出訂單
 						Parse.Cloud.run("cloudPrintOrder", 
 						{
 						 	cartId: request.params.cartId
@@ -2567,7 +2551,7 @@ Parse.Cloud.define("submitQRCode", function(request, response) {
 	});
 });
 
-//
+//小蜜蜂對帳單
 Parse.Cloud.define("beeBilling", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.equalTo("status", "complete");
@@ -2589,22 +2573,22 @@ Parse.Cloud.define("beeBilling", function(request, response) {
 	});
 });
 
-//
+//信用卡交易失敗紀錄
 Parse.Cloud.define("creditCardPaymentError", function(request, response) {
 	logger.card_transaction_error(request.params.subject, request.params.mailBody);
 	response.success(true);
 });
 
 
-// 
+// 取得飲料加料名
 function concatDisplayName(foodAdditions)
 {
-	var displayName = "";
+	var displayName = "加";
 	if (foodAdditions.indexOf(ADDITION_PEARL) != -1) {
-		displayName += " ";
+		displayName += " 珍珠";
 	}
 	if (foodAdditions.indexOf(ADDITION_COCOA) != -1) {
-		displayName += " ";
+		displayName += " 椰果";
 	}
 	if (foodAdditions.indexOf(ADDITION_QQ) != -1) {
 		displayName += " QQ";
@@ -2648,17 +2632,17 @@ function generateItemKey(request)
 {
 	var itemKey = "";
 	
-	//
+	//食物大小
     if (request.params.foodSize != null && request.params.foodSize != "") {
     	itemKey += "FoodSize" + request.params.foodSize + ",";
     }
     
-    //
+    //飲料大小
 	if (request.params.cupSize != null && request.params.cupSize != "") {
     	itemKey += "CupSize" + request.params.cupSize + ",";
     }
     
-	//
+	//冷熱
     if (request.params.coldHot != null && request.params.coldHot != "") {
     	if (request.params.coldHot == COLD_DRINK) {
     		itemKey += "ColdDrink,";
@@ -2667,29 +2651,29 @@ function generateItemKey(request)
     	}
     }
     
-    //
+    //冰塊
     if (request.params.coldHot == "" || request.params.coldHot == COLD_DRINK) {
     	if (request.params.iceLevel != null && request.params.iceLevel != "") {
 	    	itemKey += "Ice" + request.params.iceLevel + ",";	  
 	    }      	
     }
     
-    //
+    //甜度
     if (request.params.sugarLevel != null && request.params.sugarLevel != "") {
     	itemKey += "Sugar" + request.params.sugarLevel + ",";        	
     }
     
-    //
+    //辣度
     if (request.params.spicyLevel != null && request.params.spicyLevel != "") {
     	itemKey += "Spicy" + request.params.spicyLevel + ",";	        	
     }
     
-    //
+    //胡椒
     if (request.params.needPepper != null && request.params.needPepper != "") {
     	itemKey += "Pepper" + request.params.needPepper + ",";
     }
     
-    //
+    //加料
     if (request.params.cupSize != null) {
     	if (request.params.cupSize == SMALL_CUP) {
     		if (request.params.foodAdditions != null && request.params.foodAdditions != "") {
@@ -2711,7 +2695,7 @@ function generateItemKey(request)
     return itemKey;
 }
 
-//
+//將購物項目依店家分類
 function shoppingItemGroupBy(itemsFound,request, viewMode)
 {
 	var storeIdArray = [];
@@ -2727,19 +2711,19 @@ function shoppingItemGroupBy(itemsFound,request, viewMode)
 				shoppingCart = oneItem.get("shoppingCart");	
 			}
 			
-			if(shoppingCart.get("owner").id == request.user.id) { //
+			if(shoppingCart.get("owner").id == request.user.id) { //團主顯示所有購買項目
 				//query all
-				console.log("");
-			} else { //
-				console.log(":" + oneItem.get("owner").id + " vs " + request.user.id);
+				console.log("團主");
+			} else { //跟團者只顯示自己的購買項目
+				console.log("跟團者:" + oneItem.get("owner").id + " vs " + request.user.id);
 				if(oneItem.get("owner").id != request.user.id) {
-					console.log("");
+					console.log("不取");
 					continue;
 				}
 			}
 			
 		} else {
-			//
+			//只取自己訂購的項目
 			if(oneItem.get("owner").id != request.user.id) continue;
 		}
 		*/
@@ -2768,7 +2752,7 @@ function shoppingItemGroupBy(itemsFound,request, viewMode)
 	return results;
 }
 
-//
+//將購物項目依跟團人員分類
 function shoppingItemGroupByFollower(itemsFound)
 {
 	var followerIdArray = [];
@@ -2801,7 +2785,7 @@ function shoppingItemGroupByFollower(itemsFound)
 	return results;
 }
 
-//
+//問卷表
 Parse.Cloud.define("submitSurveyForm", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
     var cart = new HBShoppingCart();
@@ -2850,16 +2834,16 @@ Parse.Cloud.define("submitSurveyForm", function(request, response) {
 			comment.set("shoppingCart", cart);
 			comment.save(null,{
 				success: function(commentSaved) {
-					var subject = "[] :" + request.params.cartId;
-					var body = ":" + request.user.get("contact") + ", " + request.user.get("phone") + "<BR>";
-					body += ": " + request.params.beeName + ", " + request.params.beePhone + "<BR>";
-					body += ": " + (eval(request.params.serviceAttitude) + eval(request.params.serviceSOP) + eval(request.params.foodCondition)) + "<BR><BR>";
+					var subject = "[消費者評分問券] 訂單:" + request.params.cartId;
+					var body = "回覆者:" + request.user.get("contact") + ", " + request.user.get("phone") + "<BR>";
+					body += "外送小蜜蜂: " + request.params.beeName + ", " + request.params.beePhone + "<BR>";
+					body += "此次評分: " + (eval(request.params.serviceAttitude) + eval(request.params.serviceSOP) + eval(request.params.foodCondition)) + "<BR><BR>";
 					
-					body += ":<BR>";
-					body += ": <font color=blue>" + attitudeDesc + "(" + request.params.serviceAttitude + ")</font><BR>";
-					body += ": <font color=blue>" + sopDesc + "(" + request.params.serviceSOP + ")</font><BR>";
-					body += ": <font color=blue>" + foodConditionDesc + "(" + request.params.foodCondition + ")</font><BR>";
-					body += ": " + request.params.userComments + "<BR>";
+					body += "問卷結果:<BR>";
+					body += "外送小蜜蜂服務態度: <font color=blue>" + attitudeDesc + "(" + request.params.serviceAttitude + ")</font><BR>";
+					body += "外送小蜜蜂服務流程: <font color=blue>" + sopDesc + "(" + request.params.serviceSOP + ")</font><BR>";
+					body += "餐點送達時的狀況: <font color=blue>" + foodConditionDesc + "(" + request.params.foodCondition + ")</font><BR>";
+					body += "建議: " + request.params.userComments + "<BR>";
 					 
 					logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
 					response.success(commentSaved.id);
@@ -2876,7 +2860,7 @@ Parse.Cloud.define("submitSurveyForm", function(request, response) {
 	});	
 });
 
-//
+//更新運送狀態
 Parse.Cloud.define("updateBeeDeliverStatus", function (request, response) {
     var query = new Parse.Query(Parse.User);
     query.get(request.params.userId, {
@@ -2902,7 +2886,7 @@ Parse.Cloud.define("updateBeeDeliverStatus", function (request, response) {
     });
 });
 
-//APP
+//檢查目前APP是否為最新版
 Parse.Cloud.define("isLatestBuild", function(request, response) {
 	
 	Parse.Config.get().then(function(config) {
@@ -2928,7 +2912,7 @@ Parse.Cloud.define("isLatestBuild", function(request, response) {
 	});	
 });
 
-//
+//刪除跟團者訂購項目
 Parse.Cloud.define("deleteFollower", function(request, response) {
 	
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
@@ -3008,7 +2992,7 @@ Parse.Cloud.define("setServiceOpen", function(request, response) {
 		});
 });
 
-//()
+//我的購物車內容(依店家分類顯示)
 Parse.Cloud.define("getMyCart", function(request, response) {
 	var subQuery = new Parse.Query("HBShoppingCart");
 	subQuery.equalTo("objectId",  request.params.cartId);
@@ -3056,7 +3040,7 @@ Parse.Cloud.define("getMyCart", function(request, response) {
   				}
   			}
   			
-  			return response.success([results, sumOfFollowers]); //
+  			return response.success([results, sumOfFollowers]); //回傳個人購買項目及跟團金額
   		},
   		function(err) {
   			logger.send_error(logger.subject("getMyJoinCart", "query shopping cart items"), err); 
@@ -3065,7 +3049,7 @@ Parse.Cloud.define("getMyCart", function(request, response) {
   	);
 });
 
-//-()
+//跟團-我的購物車內容(依店家分類顯示)
 Parse.Cloud.define("getMyJoinItems", function(request, response) {
 	var subQuery = new Parse.Query("HBShoppingCart");
 	subQuery.equalTo("objectId",  request.params.cartId);
@@ -3109,7 +3093,7 @@ Parse.Cloud.define("getMyJoinItems", function(request, response) {
   				}
   			}
   			
-  			return response.success([results, dummy]); //, dummyios UI
+  			return response.success([results, dummy]); //回傳個人購買項目, 另回傳dummy，是為了ios UI共用畫面，讓程式好處理
   		},
   		function(err) {
   			logger.send_error(logger.subject("getMyJoinCart", "query shopping cart items"), err); 
@@ -3118,7 +3102,7 @@ Parse.Cloud.define("getMyJoinItems", function(request, response) {
   	);
 });
 
-//
+//我的購物車內容
 Parse.Cloud.define("getMyJoinCart", function(request, response) {
 	var subQuery = new Parse.Query("HBShoppingCart");
 	subQuery.equalTo("objectId",  request.params.cartId);
@@ -3198,7 +3182,7 @@ Parse.Cloud.define("getMyJoinCart", function(request, response) {
   	);
 });
 
-//
+//取最新消息
 Parse.Cloud.define("getAnnouncement", function(request, response) {
 	var query = new Parse.Query("HBAnnouncement");
 	query.containedIn("device", ["ios&android", request.params.deviceType]);
@@ -3216,7 +3200,7 @@ Parse.Cloud.define("getAnnouncement", function(request, response) {
   	);
 });
 
-//
+//加入團購時，先清空自己的購物車
 Parse.Cloud.define("clearMyOwnCart", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.equalTo("status", "in shopping");
@@ -3255,8 +3239,8 @@ Parse.Cloud.define("clearMyOwnCart", function(request, response) {
   	);
 });
 
-//
-//
+//司機版使用
+//取得取餐及送資訊
 Parse.Cloud.define("getOrderInfo", function(request, response) {
 	var HBShoppingCart = Parse.Object.extend("HBShoppingCart");
     var cart = new HBShoppingCart();
@@ -3288,7 +3272,7 @@ Parse.Cloud.define("getDeliveringInfoByBee", function(request, response) {
 	queryCart.containedIn("status", ["ongoing", "shipping"]);
 	queryCart.find().then(
 		function(cartFound) {
-			var cart = cartFound[0]; //
+			var cart = cartFound[0]; //一個小蜜蜂同時間只能接一個單
 			
 			var queryStore = new Parse.Query("HBStoreInCart");
 			queryStore.equalTo("cart", cart);
@@ -3319,7 +3303,7 @@ Parse.Cloud.define("getDeliveringInfoByBee", function(request, response) {
 	
 });
 
-//
+//小蜜蜂出發通知
 Parse.Cloud.define("beeTakeoffNotify", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.get(request.params.cartId, {
@@ -3328,7 +3312,7 @@ Parse.Cloud.define("beeTakeoffNotify", function(request, response) {
 	  		cartFound.set("takeoffTime", new Date());
 	  		cartFound.save(null,{
 				success: function(cartSaved){
-					logger.send_info(prop.admin_mail(), prop.mail_cc(), ":" + cartSaved.id, "", cartSaved.id);
+					logger.send_info(prop.admin_mail(), prop.mail_cc(), "小蜜蜂出發通知，訂單編號:" + cartSaved.id, "小蜜蜂已出發", cartSaved.id);
 					response.success(true);
 			    },
 				error: function(err) {
@@ -3344,7 +3328,7 @@ Parse.Cloud.define("beeTakeoffNotify", function(request, response) {
 	});
 });
 
-//-
+//店家叫外送-店家盤點簽收
 Parse.Cloud.define("storeDidSignOff", function(request, response) {
 	var query = new Parse.Query("HBStoreInCart");
 	query.include("cart");
@@ -3361,8 +3345,8 @@ Parse.Cloud.define("storeDidSignOff", function(request, response) {
 					success: function(sicSave){
 						logger.send_info(prop.admin_mail(), 
 										prop.mail_cc(), 
-										": " + sicSave.get("cart").id, 
-										":" + request.params.beeArrival, 
+										"店家盤點完畢並簽收，訂單編號: " + sicSave.get("cart").id, 
+										"小蜜蜂是否準時到店:" + request.params.beeArrival, 
 										sicSave.get("cart").id);
 										
 						var cart = sicSave.get("cart");
@@ -3390,7 +3374,7 @@ Parse.Cloud.define("storeDidSignOff", function(request, response) {
 	});
 });
 
-//-
+//店家叫外送-小蜜蜂盤點簽收
 Parse.Cloud.define("customerDidSignOff", function(request, response) {
 	var query = new Parse.Query("HBCustomerInCart");
 	query.equalTo("objectId", request.params.cicId);
@@ -3416,15 +3400,15 @@ Parse.Cloud.define("customerDidSignOff", function(request, response) {
 			
 			logger.send_info(prop.admin_mail(), 
 										prop.mail_cc(), 
-										": " + cicSaved.get("cart").id, 
-										":" + cicSaved.get("address") + "<BR>" + cicSaved.get("addressNote"), 
+										"客人盤點完畢並簽收，訂單編號: " + cicSaved.get("cart").id, 
+										"已送至:" + cicSaved.get("address") + "<BR>" + cicSaved.get("addressNote"), 
 										cicSaved.get("cart").id);
 										
 			return Parse.Promise.when(cicQuery.find(), cicSaved);
 		})
 		.then(
 			function(cicFound, cicSaved) {
-				if(cicFound.length == 0) { //
+				if(cicFound.length == 0) { //都已送達
 					var shppingCart = cicSaved.get("cart");
 					shppingCart.set("status", "complete");
 					shppingCart.set("completeDate", new Date());
@@ -3432,7 +3416,7 @@ Parse.Cloud.define("customerDidSignOff", function(request, response) {
 						success: function(cartSaved){
 							logger.send_info(prop.admin_mail(), 
 										prop.mail_cc(), 
-										"[]:" + cartSaved.id, 
+										"[訂單完成]:" + cartSaved.id, 
 										"good job.", 
 										cartSaved.id);
 										
@@ -3521,7 +3505,7 @@ Parse.Cloud.define("callPushbots", function(request, response) {
     });
 });
 
-// trigger push
+//重新 trigger push
 Parse.Cloud.define("notifyNewOrder", function(request, response) {
 	if(request.params.notify == "bee") { 
 		var query = new Parse.Query("HBShoppingCart");
@@ -3578,19 +3562,19 @@ Parse.Cloud.define("getETADateOptions", function(request, response) {
 	bizDate.push(true);     //"Fri"
 	bizDate.push(false);    //"Sat"
 	
-	var weekstring = ["()","()","()","()","()","()","()"];
+	var weekstring = ["(日)","(一)","(二)","(三)","(四)","(五)","(六)"];
 	var availableDate = [];
 	var availableDayOfWeek = [];
 	var currentTime = new Date() ;
 	var counter = 0;
 	while(true) {
 		var futureTime = new Date(currentTime);
-		futureTime.setDate(futureTime.getDate() + counter); //
-		if (bizDate[futureTime.getDay()]) { //
+		futureTime.setDate(futureTime.getDate() + counter); //累加一天
+		if (bizDate[futureTime.getDay()]) { //有營業才取
 			availableDate.push((futureTime.getMonth()+1) + "/" + futureTime.getDate() + "\n" + weekstring[futureTime.getDay()]);
 			availableDayOfWeek.push(dayOfWeek[futureTime.getDay()]);
 		}
-		if (availableDate.length == 4) break; //4
+		if (availableDate.length == 4) break; //先取4天
 		counter++;
 	}
 	response.success(availableDate, availableDayOfWeek);
@@ -3639,7 +3623,7 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 		.then(
 			function(storeSlotsFound, availableSlotFound, storeBizDateFound){
 				
-				//
+				//店家公休日
 				var storeBizDateSetting = [];
 				var storeIdInBizDate = [];
 				for(var i=0 ; i<storeBizDateFound.length ; i++) {
@@ -3684,7 +3668,7 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 				}
 				
 				console.log("storeDataArray:" + storeDataArray.length);
-				var reasonsForAllStore = []; //
+				var reasonsForAllStore = []; //此時段不可選的原因
 				for (var i=0 ; i<availableSlotFound.length ; i++) {
 					var reasonsForEachStore = [];
 						
@@ -3698,12 +3682,12 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 								
 								if (request.params.isToday == "Yes") {
 									if (storeObj.get("reservationUnit") == "day") {
-										reasonsForEachStore.push(storeObj.get("storeName") + "-" + storeObj.get("reservation") + "");
+										reasonsForEachStore.push(storeObj.get("storeName") + "-需提前" + storeObj.get("reservation") + "天訂購");
 									
 									} else if (storeObj.get("reservationUnit") == "minute") {
 										
 										if (p.get("sinceMidnight") < (((currentTime.getHours()+8) * 60 ) + currentTime.getMinutes() + storeObj.get("reservation"))) {
-											reasonsForEachStore.push(storeObj.get("storeName") + "-" + storeObj.get("reservation") + "");
+											reasonsForEachStore.push(storeObj.get("storeName") + "-需提前" + storeObj.get("reservation") + "分鐘訂購");
 										} else {
 											reasonsForEachStore.push("OK");
 										}
@@ -3713,10 +3697,10 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 										var storeOpenOnDay = storeSettingObj[request.params.dayOfWeek];
 										
 										if (!storeOpenOnDay) {
-											reasonsForEachStore.push(storeObj.get("storeName") + "-");
+											reasonsForEachStore.push(storeObj.get("storeName") + "-公休");
 										} else {
 											if (!p.get("serviceOpen")) {
-												reasonsForEachStore.push(storeObj.get("storeName") + "-");
+												reasonsForEachStore.push(storeObj.get("storeName") + "-休息時段");
 											} else {
 												reasonsForEachStore.push("OK");
 											}
@@ -3727,10 +3711,10 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 									var storeOpenOnDay = storeSettingObj[request.params.dayOfWeek];
 									
 									if (!storeOpenOnDay) {
-										reasonsForEachStore.push(storeObj.get("storeName") + "-");
+										reasonsForEachStore.push(storeObj.get("storeName") + "-公休");
 									} else {
 										if (!p.get("serviceOpen")) {
-											reasonsForEachStore.push(storeObj.get("storeName") + "-");
+											reasonsForEachStore.push(storeObj.get("storeName") + "-休息時段");
 										} else {
 											reasonsForEachStore.push("OK");
 										}
@@ -3754,18 +3738,17 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 			});
 	
 });
-
 Parse.Cloud.define("updateCartETA", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.get(request.params.cartId)
 		.then(function(cartFound) {
-	  		var tempETA = request.params.ETA; // formate: 8/8() 13:45
+	  		var tempETA = request.params.ETA; // formate: 8/8(四) 13:45
      		var eta = null;
      		if (tempETA != null && tempETA != "") {
      			var tempDay = tempETA.substring(0, tempETA.indexOf("("));
 				var tempSlot = tempETA.substring(tempETA.indexOf(" ") + 1);
 				eta = new Date(new Date().getFullYear() + "/" + tempDay + " " + tempSlot);
-				eta.setMinutes(eta.getMinutes() - 480); //  UTC 
+				eta.setMinutes(eta.getMinutes() - 480); // 轉換成 UTC 時間
 			}
      		
 	  		Parse.Cloud.useMasterKey();
