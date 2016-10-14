@@ -29,7 +29,8 @@ Parse.Cloud.define("getFoodStore", function(request, response) {
     			//obj.set("imageSource", "image1");
     			returnResults.push(obj);
     		}
-    		
+    		response.success(returnResults);
+    		/*
     		var query2 = new Parse.Query("HBFoodStore");
 			query2.equalTo("online", true);
 			query2.notEqualTo("stickyTop", 1);
@@ -49,37 +50,10 @@ Parse.Cloud.define("getFoodStore", function(request, response) {
 		      	  	response.error(err);
 		    	}
 			});
+			*/
     	},
     	error: function(err) {
 			logger.send_error(logger.subject("getFoodStore", "food store lookup failed."), error);
-      	  	response.error(err);
-    	}
-  	});
-});
-
-//(for collection view)
-Parse.Cloud.define("getFoodStoreCollection", function(request, response) {
-	var query = new Parse.Query("HBFoodStore");
-	query.equalTo("online", true); 
-  	query.find({
-    	success: function(results) {
-    		var stores = [];
-    		var leftStores = [];
-    		var rightStores = [];
-	 		for (var i = 0; i < results.length; i++) { 
-	       	 	var storeObj = results[i];
-	       	 	if (storeObj.get("displayAt") == "right") {
-	       	 		rightStores.push(storeObj);
-	       	 	} else {
-	       	 		leftStores.push(storeObj);
-	       	 	}
-			}
-	   	 	stores.push(rightStores);
-	   	 	stores.push(leftStores);
-	   	 	response.success(stores);
-    	},
-    	error: function(err) {
-			console.error("food store lookup failed" + err.code + "," + err.message);
       	  	response.error(err);
     	}
   	});
@@ -109,7 +83,7 @@ Parse.Cloud.define("getMealsOfFoodStore", function(request, response) {
   	});
 });
 
-//
+//可一起點的店家
 Parse.Cloud.define("getSameLocationStore", function(request, response) {
 	
 	if(request.params.cartMode != null && request.params.cartMode == "join") { //團購模式
@@ -454,188 +428,202 @@ Parse.Cloud.define("updateShoppingCartByFood", function(request, response) {
 	var meal = new HBMealSet();
 	meal.id = request.params.foodId;
 			
-    
-    var itemKey;
-    if (request.params.itemKey != null && request.params.itemKey != "") {
-    	itemKey = request.params.itemKey;
-    } else {
-    	itemKey = generateItemKey(request);
-    	if (itemKey == "") {
-    		itemKey = request.params.foodId;
-    	}
-    }
-    
-    var query = new Parse.Query("HBShoppingItem");
-    query.equalTo("shoppingCart", cart);
-    query.equalTo("meal", meal);
-    query.equalTo("owner", request.user);
-    query.equalTo("itemKey", itemKey);
-	query.find({
-    	success: function(shoppingItemsFound) {
-     		if (request.params.qty > 0) {
-     			var qty = request.params.qty;
-		    	var bags = request.params.bags;
-		    	var unitPrice = request.params.price;
-		    	if (shoppingItemsFound.length > 0) {
-		    		if (request.params.fromTextField == "YES") { //從購物車手動輸入修改數量(待app approved後再更新)
-		    			//do nothing
-		    		} else {
-		    			qty += shoppingItemsFound[0].get("qty"); //累加
-		    		}
-					shoppingItemsFound[0].set("qty", qty);
-			        shoppingItemsFound[0].set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
-			        shoppingItemsFound[0].set("unitPrice", unitPrice);
-			        shoppingItemsFound[0].set("subTotal", qty * unitPrice);
-     				shoppingItemsFound[0].save(null,{
-			        	success: function(itemUpdated) {
-			        		response.success(itemUpdated);	
-			        	},
-			        	error: function(err) {
-			        		logger.send_error(logger.subject("updateShoppingCartByFood", "update HBShoppingItem") , err);
-			        		response.error("update HBShoppingItem error:" + err);
-			        	}	
-			        });
-			        
-     			} else {
-     				// create new record
-		     		var HBFoodStore = Parse.Object.extend("HBFoodStore");
-			    	var store = new HBFoodStore();
-			    	store.id = request.params.storeId;
-					
-			    	var HBShoppingItem = Parse.Object.extend("HBShoppingItem");
-			        var item = new HBShoppingItem();
-			        item.set("shoppingCart", cart);
-			        item.set("qty", qty);
-			        item.set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
-			        item.set("unitPrice", unitPrice);
-			        item.set("subTotal", qty * unitPrice);
-			        item.set("owner", request.user);
-			        item.set("store", store);
-			        item.set("meal", meal);
-			        item.set("addFrom", (request.params.cartMode=="Normal") ? "self" : "line");
-			        
-			        var displayName = "";
-			        if (request.params.foodSize != null && request.params.foodSize != "") {
-			        	displayName += (request.params.foodSize == SMALL_FOOD) ? "小" : "大";
-			        	displayName += ",";
-			        	item.set("foodSize", request.params.foodSize);
-			        }
-			        
-			        if (request.params.cupSize != null && request.params.cupSize != "") {
-			        	displayName += request.params.cupSizeName + ",";
-			        	item.set("cupSize", request.params.cupSize);
-			        }
-			        
-			        if (request.params.coldHot != null && request.params.coldHot != "") {
-			        	displayName += (request.params.coldHot == COLD_DRINK) ? "冷" : "熱";
-			        	displayName += ",";
-			        	item.set("coldHot", request.params.coldHot);
-			        }
-			        
-			        if ((request.params.coldHot == "" || request.params.coldHot == COLD_DRINK) &&
-			        	request.params.iceLevel != null && request.params.iceLevel != "") {
-			        	if (request.params.iceLevel == ICE_NONE) {
-			        		displayName += "去冰";
-			        	} else if  (request.params.iceLevel == ICE_LITTLE) {
-			        		displayName += "少冰";
-			        	} else if  (request.params.iceLevel == ICE_NORMAL) {
-			        		displayName += "正常冰";
-			        	}
-						displayName += ",";
-						item.set("iceLevel", request.params.iceLevel);
-			        }
-			        
-			        if (request.params.sugarLevel != null && request.params.sugarLevel != "") {
-			        	if (request.params.sugarLevel == SUGAR_NONE) {
-			        		displayName += "無糖";
-			        	} else if  (request.params.sugarLevel == SUGAR_LITTLE) {
-			        		displayName += "1/3糖";
-			        	} else if  (request.params.sugarLevel == SUGAR_HALF) {
-			        		displayName += "1/2糖";
-			        	} else if  (request.params.sugarLevel == SUGAR_NORMAL) {
-			        		displayName += "2/3糖";
-			        	} else if  (request.params.sugarLevel == SUGAR_FULL) {
-							displayName += "全糖";
-			        	}
-							displayName += ",";
-							item.set("sugarLevel", request.params.sugarLevel);
-			        }
-			        
-			        if (request.params.spicyLevel != null && request.params.spicyLevel != "") {
-			        	if (request.params.spicyLevel == SPICY_NONE) {
-			        		displayName += "不辣";
-			        	} else if  (request.params.spicyLevel == SPICY_LITTLE) {
-			        		displayName += "小辣";
-			        	} else if  (request.params.spicyLevel == SPICY_HALF) {
-			        		displayName += "中辣";
-			        	} else if  (request.params.spicyLevel == SPICY_NORMAL) {
-			        		displayName += "大辣";
-			        	}	
-						displayName += ",";
-						item.set("spicyLevel", request.params.spicyLevel);
-			        }
-			        
-			        if (request.params.needPepper != null && request.params.needPepper != "") {
-			        	if (request.params.needPepper == PEPPER_NONE) {
-			        		displayName += "不加胡椒";
-			        	} else if  (request.params.needPepper == PEPPER_NORMAL) {
-			        		displayName += "加胡椒";
-			        	}
-						displayName += ",";
-						item.set("needPepper", request.params.needPepper);
-			        }
-			        
-			        if (request.params.foodAdditions != null && request.params.foodAdditions != "") {
-			        	displayName += concatDisplayName(request.params.foodAdditions);
-			        	item.set("foodAdditions", request.params.foodAdditions);
-			        }
-			        
-			        if (request.params.largeFoodAdditions != null && request.params.largeFoodAdditions != "") {
-			        	displayName += concatDisplayName(request.params.largeFoodAdditions);
-			        	item.set("foodAdditions", request.params.largeFoodAdditions);
-			        }
-			        if (request.params.other) {
-			        	displayName += "\n" + request.params.other;
-				        item.set("other", request.params.other);
-				    }
-				    
-			        item.set("itemNameForDisplay", displayName);
-			        item.set("itemKey", itemKey);
-			        
-			        item.save(null,{
-			        	success: function(itemCreated) {
-			        		response.success(itemCreated);	
-			        	},
-			        	error: function(err) {
-			        		logger.send_error(logger.subject("updateShoppingCartByFood", "create HBShoppingItem") , err);
-			        		response.error("create HBShoppingItem error:" + err);
-			        	}	
-			        });
-     			}
+	//get food info
+	var queryMeal = new Parse.Query("HBMealSet");		
+	queryMeal.get(request.params.foodId)
+		.then(function(mealFound) {
+			var itemKey;
+		    if (request.params.itemKey != null && request.params.itemKey != "") {
+		    	itemKey = request.params.itemKey;
 		    } else {
-		    	//remove old record
-	     		console.log("old item:" + shoppingItemsFound.length);
-	     		if (shoppingItemsFound.length > 0) {
-	     			Parse.Object.destroyAll(shoppingItemsFound,  { 
-						success: function(success) {
-							console.log("destroy old record done.");		
-							response.success(true);			
-			            }, 
-			            error: function(error) {
-							console.error("destroy old record error.");
-							response.error(error);
-						}
-		        	});
-	     		} else {
-					response.success(true);
-				}
+		    	itemKey = generateItemKey(request);
+		    	if (itemKey == "") {
+		    		itemKey = request.params.foodId;
+		    	}
 		    }
-    	},
-    	error: function(error) {
-			console.error("HBShoppingItem lookup failed:" + error.code + "," + error.message);
-      	  	response.error(error);
-		}
-  	});
+		    
+		    var query = new Parse.Query("HBShoppingItem");
+		    query.equalTo("shoppingCart", cart);
+		    query.equalTo("meal", meal);
+		    query.equalTo("owner", request.user);
+		    query.equalTo("itemKey", itemKey);
+			query.find({
+		    	success: function(shoppingItemsFound) {
+		     		if (request.params.qty > 0) {
+		     			var qty = request.params.qty;
+				    	var bags = request.params.bags;
+				    	//var unitPrice = request.params.price;
+				    	
+				    	//影響價錢的4個屬性，改由後端計算
+				    	var foodSizeSelected =  request.params.foodSize;
+				    	var foodCupSelected =  request.params.cupSize;
+				    	var additionSelected =  request.params.foodAdditions;
+				    	var largeAdditionSelected =  request.params.largeFoodAdditions;
+				    	
+				    	var unitPrice = util.getTotalFoodPrice(mealFound, foodSizeSelected, foodCupSelected, additionSelected, largeAdditionSelected);
+				    	console.log("unitPrice:" + unitPrice);
+				    	
+				    	if (shoppingItemsFound.length > 0) {
+				    		if (request.params.fromTextField == "YES") { //從購物車手動輸入修改數量(待app approved後再更新)
+				    			//do nothing
+				    		} else {
+				    			qty += shoppingItemsFound[0].get("qty"); //累加
+				    		}
+							shoppingItemsFound[0].set("qty", qty);
+					        shoppingItemsFound[0].set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
+					        shoppingItemsFound[0].set("unitPrice", unitPrice);
+					        shoppingItemsFound[0].set("subTotal", qty * unitPrice);
+		     				shoppingItemsFound[0].save(null,{
+					        	success: function(itemUpdated) {
+					        		response.success(itemUpdated);	
+					        	},
+					        	error: function(err) {
+					        		logger.send_error(logger.subject("updateShoppingCartByFood", "update HBShoppingItem") , err);
+					        		response.error("update HBShoppingItem error:" + err);
+					        	}	
+					        });
+					        
+		     			} else {
+		     				// create new record
+				     		var HBFoodStore = Parse.Object.extend("HBFoodStore");
+					    	var store = new HBFoodStore();
+					    	store.id = request.params.storeId;
+							
+					    	var HBShoppingItem = Parse.Object.extend("HBShoppingItem");
+					        var item = new HBShoppingItem();
+					        item.set("shoppingCart", cart);
+					        item.set("qty", qty);
+					        item.set("bags", eval(new Number(qty * bags).toFixed(2))); //取小數點二位
+					        item.set("unitPrice", unitPrice);
+					        item.set("subTotal", qty * unitPrice);
+					        item.set("owner", request.user);
+					        item.set("store", store);
+					        item.set("meal", meal);
+					        item.set("addFrom", (request.params.cartMode=="Normal") ? "self" : "line");
+					        
+					        var displayName = "";
+					        if (request.params.foodSize != null && request.params.foodSize != "") {
+					        	displayName += (request.params.foodSize == SMALL_FOOD) ? "小" : "大";
+					        	displayName += ",";
+					        	item.set("foodSize", request.params.foodSize);
+					        }
+					        
+					        if (request.params.cupSize != null && request.params.cupSize != "") {
+					        	displayName += request.params.cupSizeName + ",";
+					        	item.set("cupSize", request.params.cupSize);
+					        }
+					        
+					        if (request.params.coldHot != null && request.params.coldHot != "") {
+					        	displayName += (request.params.coldHot == COLD_DRINK) ? "冷" : "熱";
+					        	displayName += ",";
+					        	item.set("coldHot", request.params.coldHot);
+					        }
+					        
+					        if ((request.params.coldHot == "" || request.params.coldHot == COLD_DRINK) &&
+					        	request.params.iceLevel != null && request.params.iceLevel != "") {
+					        	if (request.params.iceLevel == ICE_NONE) {
+					        		displayName += "去冰";
+					        	} else if  (request.params.iceLevel == ICE_LITTLE) {
+					        		displayName += "少冰";
+					        	} else if  (request.params.iceLevel == ICE_NORMAL) {
+					        		displayName += "正常冰";
+					        	}
+								displayName += ",";
+								item.set("iceLevel", request.params.iceLevel);
+					        }
+					        
+					        if (request.params.sugarLevel != null && request.params.sugarLevel != "") {
+					        	if (request.params.sugarLevel == SUGAR_NONE) {
+					        		displayName += "無糖";
+					        	} else if  (request.params.sugarLevel == SUGAR_LITTLE) {
+					        		displayName += "1/3糖";
+					        	} else if  (request.params.sugarLevel == SUGAR_HALF) {
+					        		displayName += "1/2糖";
+					        	} else if  (request.params.sugarLevel == SUGAR_NORMAL) {
+					        		displayName += "2/3糖";
+					        	} else if  (request.params.sugarLevel == SUGAR_FULL) {
+									displayName += "全糖";
+					        	}
+									displayName += ",";
+									item.set("sugarLevel", request.params.sugarLevel);
+					        }
+					        
+					        if (request.params.spicyLevel != null && request.params.spicyLevel != "") {
+					        	if (request.params.spicyLevel == SPICY_NONE) {
+					        		displayName += "不辣";
+					        	} else if  (request.params.spicyLevel == SPICY_LITTLE) {
+					        		displayName += "小辣";
+					        	} else if  (request.params.spicyLevel == SPICY_HALF) {
+					        		displayName += "中辣";
+					        	} else if  (request.params.spicyLevel == SPICY_NORMAL) {
+					        		displayName += "大辣";
+					        	}	
+								displayName += ",";
+								item.set("spicyLevel", request.params.spicyLevel);
+					        }
+					        
+					        if (request.params.needPepper != null && request.params.needPepper != "") {
+					        	if (request.params.needPepper == PEPPER_NONE) {
+					        		displayName += "不加胡椒";
+					        	} else if  (request.params.needPepper == PEPPER_NORMAL) {
+					        		displayName += "加胡椒";
+					        	}
+								displayName += ",";
+								item.set("needPepper", request.params.needPepper);
+					        }
+					        
+					        if (request.params.foodAdditions != null && request.params.foodAdditions != "") {
+					        	displayName += concatDisplayName(request.params.foodAdditions);
+					        	item.set("foodAdditions", request.params.foodAdditions);
+					        }
+					        
+					        if (request.params.largeFoodAdditions != null && request.params.largeFoodAdditions != "") {
+					        	displayName += concatDisplayName(request.params.largeFoodAdditions);
+					        	item.set("foodAdditions", request.params.largeFoodAdditions);
+					        }
+					        if (request.params.other) {
+					        	displayName += "\n" + request.params.other;
+						        item.set("other", request.params.other);
+						    }
+						    
+					        item.set("itemNameForDisplay", displayName);
+					        item.set("itemKey", itemKey);
+					        
+					        item.save(null,{
+					        	success: function(itemCreated) {
+					        		response.success(itemCreated);	
+					        	},
+					        	error: function(err) {
+					        		logger.send_error(logger.subject("updateShoppingCartByFood", "create HBShoppingItem") , err);
+					        		response.error("create HBShoppingItem error:" + err);
+					        	}	
+					        });
+		     			}
+				    } else {
+				    	//remove old record
+			     		console.log("old item:" + shoppingItemsFound.length);
+			     		if (shoppingItemsFound.length > 0) {
+			     			Parse.Object.destroyAll(shoppingItemsFound,  { 
+								success: function(success) {
+									console.log("destroy old record done.");		
+									response.success(true);			
+					            }, 
+					            error: function(error) {
+									console.error("destroy old record error.");
+									response.error(error);
+								}
+				        	});
+			     		} else {
+							response.success(true);
+						}
+				    }
+		    	},
+		    	error: function(error) {
+					console.error("HBShoppingItem lookup failed:" + error.code + "," + error.message);
+		      	  	response.error(error);
+				}
+		  	});
+		});
 });
 
 //
@@ -1011,227 +999,240 @@ Parse.Cloud.define("getCoupons", function(request, response) {
 //送出購物車
 //送出後，再產生QRCode. see submitQRCode
 Parse.Cloud.define("submitShoppingCart", function(request, response) {
-	var query = new Parse.Query("HBShoppingCart");
-	query.get(request.params.cartId, {
-	  	success: function(cartFound) {
-	  		var query = new Parse.Query("HBShoppingItem");
-			query.equalTo("shoppingCart", cartFound);
-			query.include("store");
-			query.find({
-		    	success: function(itemsFound) {
-		    		var orderNoPrefix = [];
-		    		var subTotalPrice = 0;
-		    		var totalQty = 0;
-		    		
-		    		//產生訂單編號及小計
-		    		var storeObjArray = [];
-		    		var storeIdArray = [];
-		    		var storeBags = [];
-		    		for(var i=0 ; i<itemsFound.length ; i++) {
-		     			var itemObj = itemsFound[i];	
-		     			var storeObj = itemObj.get("store");
-		     			var storeFoundAt = storeIdArray.indexOf(storeObj.id);
-		     			if (storeFoundAt == -1) {
-		     				storeObjArray.push(storeObj);
-		     				storeIdArray.push(storeObj.id);
-		     				storeBags.push(itemObj.get("bags"));
-		     			}  else {
-			 				var currentBags = storeBags[storeFoundAt];
-			 				currentBags = currentBags + itemObj.get("bags");
-			 				storeBags[storeFoundAt] = currentBags;
+	if(request.params.allPayNo == "" && request.params.paymentMethod == "") {
+		response.error(err);
+	} else {
+		var query = new Parse.Query("HBShoppingCart");
+		query.get(request.params.cartId, {
+		  	success: function(cartFound) {
+		  		var query = new Parse.Query("HBShoppingItem");
+				query.equalTo("shoppingCart", cartFound);
+				query.include("store");
+				query.find({
+			    	success: function(itemsFound) {
+			    		var orderNoPrefix = [];
+			    		var subTotalPrice = 0;
+			    		var totalQty = 0;
+			    		
+			    		//產生訂單編號及小計
+			    		var storeObjArray = [];
+			    		var storeIdArray = [];
+			    		var storeBags = [];
+			    		for(var i=0 ; i<itemsFound.length ; i++) {
+			     			var itemObj = itemsFound[i];	
+			     			var storeObj = itemObj.get("store");
+			     			var storeFoundAt = storeIdArray.indexOf(storeObj.id);
+			     			if (storeFoundAt == -1) {
+			     				storeObjArray.push(storeObj);
+			     				storeIdArray.push(storeObj.id);
+			     				storeBags.push(itemObj.get("bags"));
+			     			}  else {
+				 				var currentBags = storeBags[storeFoundAt];
+				 				currentBags = currentBags + itemObj.get("bags");
+				 				storeBags[storeFoundAt] = currentBags;
+				 			}
+			     			
+			     			var storeCode = storeObj.get("storeCode");
+			     			if (orderNoPrefix.indexOf(storeCode) == -1) { // not found
+			     				orderNoPrefix.push(storeCode);
+			     			}		     			
+			     			subTotalPrice += eval(itemObj.get("subTotal"));
+			     			totalQty += eval(itemObj.get("qty"));
+			     		}
+			     		
+			     		if (request.params.sendToId != null) {
+				     		var HBUserAddressBook = Parse.Object.extend("HBUserAddressBook");
+						    var address = new HBUserAddressBook();
+							address.id = request.params.sendToId;
+				     	}
+			     	
+			     		var tempETA = request.params.ETA; // formate: 8/8(四) 13:45
+			     		if (tempETA != null && tempETA != "") {
+			     			var tempDay = tempETA.substring(0, tempETA.indexOf("("));
+							var tempSlot = tempETA.substring(tempETA.indexOf(" ") + 1);
+							var eta = new Date(new Date().getFullYear() + "/" + tempDay + " " + tempSlot);
+							eta.setMinutes(eta.getMinutes() - 480); // 轉換成 UTC 時間
+									
+							var etd = new Date(eta);
+							//送達時間前30分鐘設為取餐時間，每多一個店家多5分鐘
+							etd.setMinutes(eta.getMinutes() - 30 - ((orderNoPrefix.length-1) * 5));
+			     		}
+			     		
+			     		
+			     		Parse.Cloud.useMasterKey();
+			     		var orderNo = orderNoPrefix.join("") + "-" + request.params.cartId;
+			     		cartFound.set("orderNo", orderNo);
+			     		cartFound.set("status", request.params.status);
+			     		cartFound.set("shippingFee", eval(request.params.shippingFee));
+			 		    cartFound.set("discount", eval(request.params.discount));
+			 		    cartFound.set("totalPrice", subTotalPrice + eval(request.params.shippingFee)+eval(request.params.discount));
+			 		    cartFound.set("couponNo", request.params.couponNo);
+			 		    cartFound.set("needTaxId", request.params.needTaxId);
+			 		    cartFound.set("taxId", request.params.taxId);
+			 		    cartFound.set("payToBee", 130+((orderNoPrefix.length-1) * 15)); //130 起跳
+			 		    cartFound.set("addressNote", request.params.addressNote); 
+			 		    
+			 		    if (request.params.userEmail != "") {
+			 		    	cartFound.set("userEmail", request.params.userEmail);
 			 			}
-		     			
-		     			var storeCode = storeObj.get("storeCode");
-		     			if (orderNoPrefix.indexOf(storeCode) == -1) { // not found
-		     				orderNoPrefix.push(storeCode);
-		     			}		     			
-		     			subTotalPrice += eval(itemObj.get("subTotal"));
-		     			totalQty += eval(itemObj.get("qty"));
-		     		}
-		     		
-		     		if (request.params.sendToId != null) {
-			     		var HBUserAddressBook = Parse.Object.extend("HBUserAddressBook");
-					    var address = new HBUserAddressBook();
-						address.id = request.params.sendToId;
-			     	}
-		     	
-		     		var tempETA = request.params.ETA; // formate: 8/8(四) 13:45
-		     		if (tempETA != null && tempETA != "") {
-		     			var tempDay = tempETA.substring(0, tempETA.indexOf("("));
-						var tempSlot = tempETA.substring(tempETA.indexOf(" ") + 1);
-						var eta = new Date(new Date().getFullYear() + "/" + tempDay + " " + tempSlot);
-						eta.setMinutes(eta.getMinutes() - 480); // 轉換成 UTC 時間
-								
-						var etd = new Date(eta);
-						//送達時間前30分鐘設為取餐時間，每多一個店家多5分鐘
-						etd.setMinutes(eta.getMinutes() - 30 - ((orderNoPrefix.length-1) * 5));
-		     		}
-		     		
-		     		
-		     		Parse.Cloud.useMasterKey();
-		     		var orderNo = orderNoPrefix.join("") + "-" + request.params.cartId;
-		     		cartFound.set("orderNo", orderNo);
-		     		cartFound.set("status", request.params.status);
-		     		cartFound.set("shippingFee", eval(request.params.shippingFee));
-		 		    cartFound.set("discount", eval(request.params.discount));
-		 		    cartFound.set("totalPrice", subTotalPrice + eval(request.params.shippingFee)+eval(request.params.discount));
-		 		    cartFound.set("couponNo", request.params.couponNo);
-		 		    cartFound.set("needTaxId", request.params.needTaxId);
-		 		    cartFound.set("taxId", request.params.taxId);
-		 		    cartFound.set("payToBee", 130+((orderNoPrefix.length-1) * 15)); //130 起跳
-		 		    cartFound.set("addressNote", request.params.addressNote); 
-		 		    
-		 		    if (request.params.userEmail != "") {
-		 		    	cartFound.set("userEmail", request.params.userEmail);
-		 			}
-		 			if (request.params.phone != "") {
-		 		    	cartFound.set("contactPhone", request.params.phone);
-		 			}
-		 			if (request.params.contact != "") {
-		 		    	cartFound.set("contactPerson", request.params.contact);
-		 			}
-		 			
-		 		    if (request.params.deliveryOrder == true) {
-			 		    cartFound.set("ETD", etd);
-			 		    cartFound.set("ETA", eta);
-			 		}
-		 		    cartFound.set("allPayNo", request.params.allPayNo);
-		 		    if (request.params.sendToId != null) {
-			 		    cartFound.set("sendTo", address);
-			 		}
-		 		    cartFound.set("deliveryOrder", request.params.deliveryOrder);
-		 		    cartFound.set("submittedDate", new Date());
-		 		    cartFound.set("lineModeEnable", false);
-		 		    if (request.params.installationId) {
-		 		    	cartFound.set("installation", request.params.installationId);	
-		 		    }
-		 		    if (request.params.sinceMidnight) {
-		 		    	cartFound.set("etaSinceMidnight", request.params.sinceMidnight);	
-		 		    }
-		 		    
-		 		    cartFound.save({})
-		 		    	.then(function(cartUpdated) {
-		 		    		var queryAddr = new Parse.Query("HBUserAddressBook");
-							queryAddr.equalTo("objectId", cartUpdated.get("sendTo").id);
-		 		    		return Parse.Promise.when( queryAddr.find(), cartUpdated);
-		 		    	})
-		 		    	.then(function(addrFound, cartUpdated) {
-		 		    		var HBCustomerInCart = Parse.Object.extend("HBCustomerInCart");
-				        	var customerInCart = new HBCustomerInCart();
-				        	customerInCart.set("address", addrFound[0].get("address"));
-				        	customerInCart.set("location", addrFound[0].get("geoLocation"));
-				        	customerInCart.set("contact", request.params.contact);
-		 					customerInCart.set("phone", request.params.phone);
-				        	customerInCart.set("addressNote", request.params.addressNote); 
-				        	customerInCart.set("cart", cartUpdated); 
-				        	customerInCart.set("delivered", false); 
-				        	customerInCart.set("ETA", cartUpdated.get("ETA")); 
-				        	return Parse.Promise.when( customerInCart.save(), cartUpdated);
-		 		    	})
-		 		    	.then(function(customerInCart, cartFound) {
-		 		    		// create new 
-				        	var HBStoreInCart = Parse.Object.extend("HBStoreInCart");
-							var itemArray = [];
-							for (var i= 0 ; i<storeObjArray.length ; i++) {
-						    	var item = new HBStoreInCart();
-						        item.set("cart", cartFound);
-						        item.set("store", storeObjArray[i]);
-						        item.set("foodTaken", false);
-						        item.set("replied", false);
-						        item.set("bags", Math.ceil(storeBags[i])); //無條件進位
-		        
-						        //todo. 之後再依實際載具運算, Avery . 160621
-						        var bagSize = "S";
-						        if (Math.ceil(storeBags[i]) > 5) {
-						        	bagSize = "L";
-						        }
-						        item.set("bagSize", bagSize);
-						        itemArray.push(item);
-						    }
-						
-						    Parse.Object.saveAll(itemArray, {
-						        success: function(dataCreated) {
-						            //update user info according to order's user info
-						        	var currentUser = request.user;
-						        	currentUser.set("phone", request.params.phone);
-						        	currentUser.set("contact", request.params.contact);
-						        	currentUser.set("userEmail", request.params.userEmail);
-						        	
-						        	if(request.params.rememberCreditCart == "YES") {
-						 		    	currentUser.set("rememberCardNo", true);
-						 		    	currentUser.set("cardNo", request.params.cardNo);
-						 		    	currentUser.set("cardValidMonth", request.params.cardValidMM);
-						 		    	currentUser.set("cardValidYear", request.params.cardValidYY);
-						 		    } else {
-						 		    	currentUser.set("rememberCardNo", false);
-						 		    }
-						 		    
-						 		    currentUser.save(null, {
-						        		success: function(userUpdated) {
-						        			var subject = userUpdated.get("contact") + " 送出新訂單: " + cartFound.id;
-						        			var sDate = cartFound.get("submittedDate");
-						        			
-						        			var body = "訂購人: " + userUpdated.get("contact") + ", " + userUpdated.get("phone") + "<BR>";
-						        			body += "email: " + userUpdated.get("userEmail") + "<BR><BR>";
-						        			body += "訂單編號: " + cartFound.id + "<BR>";
-						        			body += "訂單產生時間: " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
-						        			
-						        			body += "餐點預計送達時間: " + tempETA + "<BR>";
-						        			body += "送餐地址: " + request.params.address + "<BR>";
-						        			body += "送餐備註: " + request.params.addressNote + "<BR><BR>";
-						        			
-						        			body += "餐費: $" + subTotalPrice + "<BR>";
-						        			body += "運費: $" + cartFound.get("shippingFee") + "<BR>";
-						        			
-						        			if (cartFound.get("couponNo") != "") {
-						        				body += "折價金額: $" + cartFound.get("discount") + " (折價卷: " + cartFound.get("couponNo") + ")<BR>";
-						        			} else {
-						        				body += "折價金額: $0 (未使用折價卷)<BR>";
-						        			}
-						        			
-						        			body += "刷卡金額: <font color=blue>$" + cartFound.get("totalPrice") + "</font><BR>";
-						        			body += "歐付寶交易序號: " + cartFound.get("allPayNo") + "<BR><BR>";
-						        			body += prop.order_info() + "?objectId=" + cartFound.id;
-						        			
-						        			logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
-						        			
-						        			//計算出較精準的到店取餐時間
-						        			Parse.Cloud.run("calculateETD", 
-						        							{cartId: cartFound.id}, 
-						        							{
-								                            	success: function (result) {
-								                            		response.success(cartFound.id);
-								                        		}, error: function (error) {
-								                        			logger.send_error(logger.subject("submitShoppingCart", "call calculateETD failed."), error);
-																	response.error(error);
-								                        		}
-								                            });
-						        			
-						        		},
-						        		error: function(error) { 
-						        			logger.send_error(logger.subject("submitShoppingCart", "currentUser update failed."), error);
-											response.error(error);
-						        		}
-						        	});
-						        },
-						        error: function(error) { 
-						            logger.send_error(logger.subject("updateShoppingCart", "save HBShoppingItem"), error);
-									response.error(error);		
-						        }
-							});
-		 		    	});
-				},
-		    	error: function(err) {
-					logger.send_error(logger.subject("submitShoppingCart", "find shopping item error."), err);
-		      	  	//response.error(err);
-		    	}
-		  	});
-	 	},
-	  	error: function(object, err) {
-			logger.send_error(logger.subject("submitShoppingCart", "query shopping cart error."), err);
-			response.error("submitShoppingCart failed." + err.code + "," + err.message);
-	  	}
-	});
+			 			if (request.params.phone != "") {
+			 		    	cartFound.set("contactPhone", request.params.phone);
+			 			}
+			 			if (request.params.contact != "") {
+			 		    	cartFound.set("contactPerson", request.params.contact);
+			 			}
+			 			
+			 		    if (request.params.deliveryOrder == true) {
+				 		    cartFound.set("ETD", etd);
+				 		    cartFound.set("ETA", eta);
+				 		}
+			 		    cartFound.set("allPayNo", request.params.allPayNo);
+			 		    if (request.params.sendToId != null) {
+				 		    cartFound.set("sendTo", address);
+				 		}
+			 		    cartFound.set("deliveryOrder", request.params.deliveryOrder);
+			 		    cartFound.set("submittedDate", new Date());
+			 		    cartFound.set("lineModeEnable", false);
+			 		    if (request.params.installationId) {
+			 		    	cartFound.set("installation", request.params.installationId);	
+			 		    }
+			 		    if (request.params.sinceMidnight) {
+			 		    	cartFound.set("etaSinceMidnight", request.params.sinceMidnight);	
+			 		    }
+			 		    
+			 		    if (request.params.paymentMethod) {
+			 		    	//司機版會受影響，暫時不更新此柵位
+			 		    	//cartFound.set("paymentMethod", request.params.paymentMethod);
+			 		    	
+			 		    	if(request.params.paymentMethod == "userPayCash") { //貨到付款
+			 		    		cartFound.set("allPayNo", "userPayCash");
+			 		    	}
+			 		    }
+			 		    
+			 		    cartFound.save({})
+			 		    	.then(function(cartUpdated) {
+			 		    		var queryAddr = new Parse.Query("HBUserAddressBook");
+								queryAddr.equalTo("objectId", cartUpdated.get("sendTo").id);
+			 		    		return Parse.Promise.when( queryAddr.find(), cartUpdated);
+			 		    	})
+			 		    	.then(function(addrFound, cartUpdated) {
+			 		    		var HBCustomerInCart = Parse.Object.extend("HBCustomerInCart");
+					        	var customerInCart = new HBCustomerInCart();
+					        	customerInCart.set("address", addrFound[0].get("address"));
+					        	customerInCart.set("location", addrFound[0].get("geoLocation"));
+					        	customerInCart.set("contact", request.params.contact);
+			 					customerInCart.set("phone", request.params.phone);
+					        	customerInCart.set("addressNote", request.params.addressNote); 
+					        	customerInCart.set("cart", cartUpdated); 
+					        	customerInCart.set("delivered", false); 
+					        	customerInCart.set("ETA", cartUpdated.get("ETA")); 
+					        	return Parse.Promise.when( customerInCart.save(), cartUpdated);
+			 		    	})
+			 		    	.then(function(customerInCart, cartFound) {
+			 		    		// create new 
+					        	var HBStoreInCart = Parse.Object.extend("HBStoreInCart");
+								var itemArray = [];
+								for (var i= 0 ; i<storeObjArray.length ; i++) {
+							    	var item = new HBStoreInCart();
+							        item.set("cart", cartFound);
+							        item.set("store", storeObjArray[i]);
+							        item.set("foodTaken", false);
+							        item.set("replied", false);
+							        item.set("bags", Math.ceil(storeBags[i])); //無條件進位
+			        
+							        //todo. 之後再依實際載具運算, Avery . 160621
+							        var bagSize = "S";
+							        if (Math.ceil(storeBags[i]) > 5) {
+							        	bagSize = "L";
+							        }
+							        item.set("bagSize", bagSize);
+							        itemArray.push(item);
+							    }
+							
+							    Parse.Object.saveAll(itemArray, {
+							        success: function(dataCreated) {
+							            //update user info according to order's user info
+							        	var currentUser = request.user;
+							        	currentUser.set("phone", request.params.phone);
+							        	currentUser.set("contact", request.params.contact);
+							        	currentUser.set("userEmail", request.params.userEmail);
+							        	
+							        	if(request.params.rememberCreditCart == "YES") {
+							 		    	currentUser.set("rememberCardNo", true);
+							 		    	currentUser.set("cardNo", request.params.cardNo);
+							 		    	currentUser.set("cardValidMonth", request.params.cardValidMM);
+							 		    	currentUser.set("cardValidYear", request.params.cardValidYY);
+							 		    } else {
+							 		    	currentUser.set("rememberCardNo", false);
+							 		    }
+							 		    
+							 		    currentUser.save(null, {
+							        		success: function(userUpdated) {
+							        			var subject = userUpdated.get("contact") + " 送出新訂單: " + cartFound.id;
+							        			var sDate = cartFound.get("submittedDate");
+							        			
+							        			var body = "訂購人: " + userUpdated.get("contact") + ", " + userUpdated.get("phone") + "<BR>";
+							        			body += "email: " + userUpdated.get("userEmail") + "<BR><BR>";
+							        			body += "訂單編號: " + cartFound.id + "<BR>";
+							        			body += "訂單產生時間: " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
+							        			
+							        			body += "餐點預計送達時間: " + tempETA + "<BR>";
+							        			body += "送餐地址: " + request.params.address + "<BR>";
+							        			body += "送餐備註: " + request.params.addressNote + "<BR><BR>";
+							        			
+							        			body += "餐費: $" + subTotalPrice + "<BR>";
+							        			body += "運費: $" + cartFound.get("shippingFee") + "<BR>";
+							        			
+							        			if (cartFound.get("couponNo") != "") {
+							        				body += "折價金額: $" + cartFound.get("discount") + " (折價卷: " + cartFound.get("couponNo") + ")<BR>";
+							        			} else {
+							        				body += "折價金額: $0 (未使用折價卷)<BR>";
+							        			}
+							        			
+							        			body += "刷卡金額: <font color=blue>$" + cartFound.get("totalPrice") + "</font><BR>";
+							        			body += "歐付寶交易序號: " + cartFound.get("allPayNo") + "<BR><BR>";
+							        			body += prop.order_info() + "?objectId=" + cartFound.id;
+							        			
+							        			logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
+							        			
+							        			//計算出較精準的到店取餐時間
+							        			Parse.Cloud.run("calculateETD", 
+							        							{cartId: cartFound.id}, 
+							        							{
+									                            	success: function (result) {
+									                            		response.success(cartFound.id);
+									                        		}, error: function (error) {
+									                        			logger.send_error(logger.subject("submitShoppingCart", "call calculateETD failed."), error);
+																		response.error(error);
+									                        		}
+									                            });
+							        			
+							        		},
+							        		error: function(error) { 
+							        			logger.send_error(logger.subject("submitShoppingCart", "currentUser update failed."), error);
+												response.error(error);
+							        		}
+							        	});
+							        },
+							        error: function(error) { 
+							            logger.send_error(logger.subject("updateShoppingCart", "save HBShoppingItem"), error);
+										response.error(error);		
+							        }
+								});
+			 		    	});
+					},
+			    	error: function(err) {
+						logger.send_error(logger.subject("submitShoppingCart", "find shopping item error."), err);
+			      	  	//response.error(err);
+			    	}
+			  	});
+		 	},
+		  	error: function(object, err) {
+				logger.send_error(logger.subject("submitShoppingCart", "query shopping cart error."), err);
+				response.error("submitShoppingCart failed." + err.code + "," + err.message);
+		  	}
+		});
+	}
 });
 
 // Line state
@@ -2325,6 +2326,9 @@ Parse.Cloud.define("getDeliveryTimeSlot", function(request, response) {
 	
 			//目前的時間+60分鐘訂為可開始訂餐時間
 			var minSlot = (currentTime.getHours() + 8) * 60 + currentTime.getMinutes() + 60;
+			if (currentTime.getHours() + 8 > 18) {
+				minSlot = (currentTime.getHours() + 8) * 60 + currentTime.getMinutes() + 75;
+			}
 			console.log(currentTime + ", minSlot:" + minSlot);
 			
 			var subQuery = new Parse.Query("HBTimeSlot");
@@ -3744,6 +3748,7 @@ Parse.Cloud.define("getTimeSlotByDate", function(request, response) {
 			});
 	
 });
+
 Parse.Cloud.define("updateCartETA", function(request, response) {
 	var query = new Parse.Query("HBShoppingCart");
 	query.get(request.params.cartId)
@@ -3772,4 +3777,11 @@ Parse.Cloud.define("updateCartETA", function(request, response) {
 				response.error("updateCartETA failed." + err.code + "," + err.message);
 	  		}
 	  	);
+});
+
+//取餐碼
+Parse.Cloud.define("getPickupCode", function(request, response) {
+	var code = util.foodPickupCode(request.params.cartId);
+	console.log(request.params.cartId + " 取餐碼:" + code);
+	response.success(code);	 
 });

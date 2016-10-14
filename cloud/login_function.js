@@ -91,60 +91,71 @@ Parse.Cloud.define("getAuthCode", function(req, res) {
 		}
 		
 		if (userFound) {
-			var authCodeSent = parseInt(userFound.get("authCodeSent"));
-			if (authCodeSent >= 3) { 
-				res.success(200); //超過 3 次取簡訊但未登入,暫時鎖住
-			} else {
-				authCodeSent = authCodeSent + 1; //increase authCodeSent column
-				userFound.setPassword(secretPasswordToken + num);
-				if (!isTestAccount) {
-					userFound.set("authCodeSent", authCodeSent); 
-				}
+			if (userFound.get("bypass")) { // 透過客服後台進行設定
 				userFound.save(null,{
-					success: function(userSaved) {
-						if (!isTestAccount) { //test account does not need sms
-							
-							if (authCodeSent == 2) { //改使用twillio
-								console.log("switch to twillio");
-								sendCodeSms(req.params.phoneNo, num);
-								logger.send_notify(prop.admin_mail(), "", req.params.phoneNo + " 使用 Twillio 取簡訊", num);
-							} else {
-								if (prop.sms_provider() == "twillio") {
+						success: function(userSaved) {
+							res.success(100);
+						},
+						error: function(err) {
+							logger.send_error(logger.subject("getAuthCode", "save authCodeSent") , err);
+							res.error("save user error:" + err);
+						}	
+					});
+			} else {
+				var authCodeSent = parseInt(userFound.get("authCodeSent"));
+				if (authCodeSent >= 3) { 
+					res.success(200); //超過 3 次取簡訊但未登入,暫時鎖住
+				} else {
+					authCodeSent = authCodeSent + 1; //increase authCodeSent column
+					userFound.setPassword(secretPasswordToken + num);
+					if (!isTestAccount) {
+						userFound.set("authCodeSent", authCodeSent); 
+					}
+					userFound.save(null,{
+						success: function(userSaved) {
+							if (!isTestAccount) { //test account does not need sms
+								
+								if (authCodeSent == 2) { //改使用twillio
+									console.log("switch to twillio");
 									sendCodeSms(req.params.phoneNo, num);
-								} else if (prop.sms_provider() == "kotsms") {
-									//sendCodeByKotsms(req.params.phoneNo, num);
-									//kotSendSmsMail(req.params.phoneNo, num); //透過email發簡訊
-									
-									
-									Parse.Cloud.run("sendCodeKotsms", 
-									{
-									 	phoneNumber: req.params.phoneNo, 
-									 	code: num
-									 }, 
-									 {
-										success: function(result){
-											//console.log("sendCodeByKotsms result" + result);
-											response.success(result);
-									 	},
-									 	error: function(error) {
-									 		logger.send_error(logger.subject("getAuthCode", "sendCodeByKotsms error"), error);
-											response.error(error);
-										}
-									});
-									
+									logger.send_notify(prop.admin_mail(), "", req.params.phoneNo + " 使用 Twillio 取簡訊", num);
+								} else {
+									if (prop.sms_provider() == "twillio") {
+										sendCodeSms(req.params.phoneNo, num);
+									} else if (prop.sms_provider() == "kotsms") {
+										//sendCodeByKotsms(req.params.phoneNo, num);
+										//kotSendSmsMail(req.params.phoneNo, num); //透過email發簡訊
+										
+										
+										Parse.Cloud.run("sendCodeKotsms", 
+										{
+										 	phoneNumber: req.params.phoneNo, 
+										 	code: num
+										 }, 
+										 {
+											success: function(result){
+												//console.log("sendCodeByKotsms result" + result);
+												response.success(result);
+										 	},
+										 	error: function(error) {
+										 		logger.send_error(logger.subject("getAuthCode", "sendCodeByKotsms error"), error);
+												response.error(error);
+											}
+										});
+										
+									}
 								}
+								
 							}
-							
-						}
-						res.success(100);
-					},
-					error: function(err) {
-						logger.send_error(logger.subject("getAuthCode", "save authCodeSent") , err);
-						res.error("save user error:" + err);
-					}	
-				});
+							res.success(100);
+						},
+						error: function(err) {
+							logger.send_error(logger.subject("getAuthCode", "save authCodeSent") , err);
+							res.error("save user error:" + err);
+						}	
+					});
+				}	
 			}
-			
 		} else {
 			var userACL = new Parse.ACL();
 			userACL.setPublicReadAccess(true);
@@ -165,6 +176,10 @@ Parse.Cloud.define("getAuthCode", function(req, res) {
 			user.setUsername(username);
 			user.setPassword(secretPasswordToken + num);
 			user.setACL(userACL);
+			user.set("canPayCash", false);
+			if (req.params.app == "driver") {
+				user.set("mentorBee", false);
+			}
 			user.signUp(null, {   //see https://www.parse.com/docs/js/guide#users-signing-up
 				success: function(user) {
 					if (!isTestAccount) {
@@ -218,25 +233,47 @@ Parse.Cloud.define("login", function(req, res) {
 		}
 		
 		var pwd = secretPasswordToken + req.params.authCode;
-		Parse.User.logIn(loginUserName, pwd, {
-			success: function(userLoggined) {
-				Parse.Cloud.useMasterKey();
-				userLoggined.set("authCodeSent", 0); //reset authCodeSent if login successfully
-				userLoggined.save(null, {
-					success: function(user) {
-						res.success(user.getSessionToken());
+		
+		//find reference user.
+		var queryUser = new Parse.Query(Parse.User);
+		queryUser.equalTo('username', "driver-" + req.params.phoneOfReference);	
+		queryUser.first().then(
+			function(beeFound) {
+				console.log("bee found-" + beeFound);
+				
+				Parse.User.logIn(loginUserName, pwd, {
+					success: function(userLoggined) {
+						Parse.Cloud.useMasterKey();
+						userLoggined.set("authCodeSent", 0); //reset authCodeSent if login successfully
+						userLoggined.increment("loginCount");
+						if(typeof beeFound !== "undefined") {
+							userLoggined.set("referenceBy", beeFound);
+							if(beeFound.get("mentorBee")) {
+								userLoggined.set("canPayCash", true);
+							}
+						}
+						userLoggined.save(null, {
+							success: function(user) {
+								res.success(user.getSessionToken());
+							},
+							error: function(error) {
+								logger.send_error(logger.subject("login", "save authCodeSent"), error);
+								res.error(300); //update user info failed
+							}	
+						});
 					},
 					error: function(error) {
-						logger.send_error(logger.subject("login", "save authCodeSent"), error);
-						res.error(300); //update user info failed
-					}	
+						logger.send_error(logger.subject("login", "auth code not match"), error);
+						res.error(200); //auth code not match
+					}
 				});
-			},
-			error: function(error) {
-				logger.send_error(logger.subject("login", "auth code not match"), error);
-				res.error(200); //auth code not match
+			}, 
+			function (err) {
+				logger.send_error(logger.subject("login", "find bee error."), err);
+				res.error(JSON.stringify(err));
 			}
-		});
+		);
+		
 	} else {
 		res.error('Invalid parameters.');
 	}

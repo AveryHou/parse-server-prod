@@ -217,6 +217,9 @@ Parse.Cloud.job("queryTimeSlot", function(req, status) {
 Parse.Cloud.job("createStoreProductivity", function(req, status) {
 	
   	var query = new Parse.Query("HBTimeSlot");
+  	if(req.params.sinceMidnight) {
+  		query.greaterThan("sinceMidnight", req.params.sinceMidnight);
+  	}
 	query.find({
 		success: function(slotFound) {
 			
@@ -235,7 +238,12 @@ Parse.Cloud.job("createStoreProductivity", function(req, status) {
 		        prod.set("store", store);
 		        prod.set("timeSlot", slotObj);
 		        prod.set("sinceMidnight",slotObj.get("sinceMidnight") );//for sorting
-		        prod.set("serviceOpen", true);
+		        if(slotObj.get("sinceMidnight") <= req.params.openUntil) {
+		        	prod.set("serviceOpen", true);
+		        } else {
+		        	prod.set("serviceOpen", false);
+		        }
+		        
 		        dataToCreate.push(prod);
 		        
 			}
@@ -828,4 +836,35 @@ Parse.Cloud.job("setStoreBizDate", function(request, status) {
 			response.error(error);
   		}
   	);
+});
+
+//09:21 設公休
+Parse.Cloud.job("updateStoreBizStatus", function(req, status) {
+	var query = new Parse.Query("HBStoreBusinessDate");
+	query.find({
+		success: function(dataFound) {
+			var data = [];
+			
+			for (var i=0 ; i<dataFound.length ; i++) {
+				var biz = dataFound[i];
+				biz.set(req.params.dayOfWeek, req.params.isOpen);
+				data.push(biz);
+			}
+			
+			Parse.Cloud.useMasterKey();
+			Parse.Object.saveAll(data, {
+		        success: function(results) {
+		            status.success(" saved ok");
+		        },
+		        error: function(error) { 
+		            console.error("save  failed:" + error.code + "," + error.message);
+					status.error(error.message);	
+		        }
+		    });
+		},
+		error: function(err) {
+			console.error("find store failed" + err.code + "," + err.message);
+      	  	status.error(err);
+    	}
+    });
 });

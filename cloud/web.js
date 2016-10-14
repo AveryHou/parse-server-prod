@@ -193,182 +193,227 @@ Parse.Cloud.define("updateShoppingItemQty", function(request, response) {
 
 //將購物車設為搶標狀態
 Parse.Cloud.define("setCartOnBid", function(request, response) {
-	
 	var query = new Parse.Query("HBShoppingCart");
 	query.equalTo("allPayStamp",  request.params.stamp);
 	query.include("owner");
 	query.include("sendTo");
 	query.find()
 		.then(function(cartsFound) {	//update shopping cart
-			cartsFound[0].set("submittedDate", new Date());
-			cartsFound[0].set("status", "onbid");
-			cartsFound[0].set("allPayNo", request.params.allPayNo);
-			return cartsFound[0].save();
-		}).
-		then(function(cartSaved) {
-			console.log("cart saved");
-			
-			//query shopping item
-			var queryItem = new Parse.Query("HBShoppingItem");
-			queryItem.equalTo("shoppingCart", cartSaved);
-			queryItem.include("store");
-			return Parse.Promise.when(cartSaved, queryItem.find());
-		}).
-		then(
-			function(cartSaved, itemsFound) { // create HBStoreInCart
-				console.log("shopping cart item:" + itemsFound.length);
-				var orderNoPrefix = [];
-				var totalFoodPrice = 0;
-				var storeObjArray = [];
-				var storeIdArray = [];
-				var storeBags = [];
-				for(var i=0 ; i<itemsFound.length ; i++) {
-		 			var itemObj = itemsFound[i];	
-		 			var storeObj = itemObj.get("store");
-		 			
-		 			var storeFoundAt = storeIdArray.indexOf(storeObj.id);
-		 			if (storeFoundAt == -1) {
-		 				storeObjArray.push(storeObj);
-		 				storeIdArray.push(storeObj.id);
-		 				storeBags.push(itemObj.get("bags"));
-		 			} else {
-		 				var currentBags = storeBags[storeFoundAt];
-		 				currentBags = currentBags + itemObj.get("bags");
-		 				storeBags[storeFoundAt] = currentBags;
-		 			}
-		 			
-		 			var storeCode = storeObj.get("storeCode");
-		 			if (orderNoPrefix.indexOf(storeCode) == -1) { // not found
-		 				orderNoPrefix.push(storeCode);
-		 			}
-		 			totalFoodPrice += itemObj.get("subTotal");
-		 		}
-		 		
-		 		var HBStoreInCart = Parse.Object.extend("HBStoreInCart");
-		 		var promises = [];
-		 		console.log("stores in cart:" + storeObjArray.length);
-				for (var i= 0 ; i<storeObjArray.length ; i++) { 
-			    	var item = new HBStoreInCart();
-			        item.set("cart", cartSaved);
-			        item.set("store", storeObjArray[i]);
-			        item.set("foodTaken", false);
-			        item.set("replied", false);
-			        item.set("bags", Math.ceil(storeBags[i])); //無條件進位
-			        
-			        //todo. 之後再依實際載具運算, Avery . 160621
-			        var bagSize = "S";
-			        if (Math.ceil(storeBags[i]) > 5) {
-			        	bagSize = "L";
-			        }
-			        item.set("bagSize", bagSize);
-			        promises.push(item.save());
-				}
-				return Parse.Promise.when(cartSaved, promises);
-			},
-			function(error) {
-				logger.send_error(logger.subject("setCartOnBid", "create HBStoreInCart error."), error);
-				response.error(error);
-			}
-		)	
-		.then(function(cartSaved, sicSaved) {
-			var queryAddr = new Parse.Query("HBUserAddressBook");
-			queryAddr.equalTo("objectId", cartSaved.get("sendTo").id);
-			return Parse.Promise.when(cartSaved, queryAddr.find());
-		})	
-		.then(
-			function(cartSaved, addrFound) { // create HBCustomerInCart
-				var HBCustomerInCart = Parse.Object.extend("HBCustomerInCart");
-		    	var customerInCart = new HBCustomerInCart();
-		    	customerInCart.set("address", addrFound[0].get("address"));
-		    	customerInCart.set("location", addrFound[0].get("geoLocation"));
-		    	customerInCart.set("contact", cartSaved.get("contactPerson"));
-				customerInCart.set("phone", cartSaved.get("contactPhone"));
-		    	customerInCart.set("addressNote", cartSaved.get("addressNote")); 
-		    	customerInCart.set("cart", cartSaved);
-		    	customerInCart.set("delivered", false);
-		    	customerInCart.set("ETA", cartSaved.get("ETA"));
-		    	return Parse.Promise.when(cartSaved, customerInCart.save());
-			},
-			function(error) {
-				logger.send_error(logger.subject("setCartOnBid", "create HBCustomerInCart error."), error);
-				response.error(error);
-			}
-		)	
-		.then(function(cartSaved, cicSaved) {
-			
-			var addressBook = cartSaved.get("sendTo");
-			var owner = cartSaved.get("owner");
-			var subject = owner.get("contact") + " 送出新訂單: " + cartSaved.id;
-			var sDate = cartSaved.get("submittedDate");
-			
-			var total = cartSaved.get("totalPrice");
-			var shipping = cartSaved.get("shippingFee");
-			var discount = cartSaved.get("discount");
-			var foodPrice = total - shipping - discount;
-			
-			var localETD = cartSaved.get("ETA");
-			
-			
-			var body = "訂購人: " + owner.get("contact") + ", " + owner.get("phone") + "<BR>";
-			body += "email: " + owner.get("userEmail") + "<BR><BR>";
-			body += "訂單編號: " + cartSaved.id + "<BR>";
-			body += "訂單產生時間: " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
-			
-			body += "餐點預計送達時間: " + (localETD.getMonth() + 1) + "/" + localETD.getDate() + " " + (localETD.getHours()+8) + ":" + localETD.getMinutes() + "<BR>";
-			body += "送餐地址: " + addressBook.get("address") + "<BR>";
-			body += "送餐備註: " + addressBook.get("addressNote") + "<BR><BR>";
-			
-			body += "餐費: $" + foodPrice  + "<BR>";
-			body += "運費: $" + shipping + "<BR>";
-			
-			if (cartSaved.get("couponNo") != "") {
-				body += "折價金額: $" + discount + " (折價卷: " + cartSaved.get("couponNo") + ")<BR>";
+			var cartObj = cartsFound[0];
+			if(cartsFound[0].get("status") == "in shopping") {
+				cartsFound[0].set("submittedDate", new Date());
+				cartsFound[0].set("status", "onbid");	
+				cartsFound[0].set("allPayNo", request.params.allPayNo);
+				return cartsFound[0].save()
+					.then(function(cartSaved) {
+						console.log("setCartOnBid cartSaved:" + cartSaved.id);
+						//query shopping item
+						var queryItem = new Parse.Query("HBShoppingItem");
+						queryItem.equalTo("shoppingCart", cartSaved);
+						queryItem.include("store");
+						
+						var querySIC = new Parse.Query("HBStoreInCart");
+					    querySIC.equalTo("cart", cartSaved);
+					    
+						return Parse.Promise.when(cartSaved, queryItem.find(), querySIC.find());
+					})
+					.then(function(cartSaved, itemsFound, sicFound) {
+						console.log("shoppingcart item::" + itemsFound.length);
+						console.log("querySIC:" + sicFound.length);
+						if(sicFound.length > 0) { //刪舊資料
+							Parse.Object.destroyAll(sicFound,  { 
+								success: function(success) {
+									console.log("delete sic:");
+								}, 
+					            error: function(error) {
+									response.error(error);
+								}
+				        	});
+				        	return Parse.Promise.when(cartSaved, itemsFound);
+						} else {
+							return Parse.Promise.when(cartSaved, itemsFound);
+						}
+					}).
+					then(function(cartSaved, itemsFound) { //create HBStoreInCart
+						var orderNoPrefix = [];
+						var totalFoodPrice = 0;
+						var storeObjArray = [];
+						var storeIdArray = [];
+						var storeBags = [];
+						for(var i=0 ; i<itemsFound.length ; i++) {
+				 			var itemObj = itemsFound[i];	
+				 			var storeObj = itemObj.get("store");
+				 			
+				 			var storeFoundAt = storeIdArray.indexOf(storeObj.id);
+				 			if (storeFoundAt == -1) {
+				 				storeObjArray.push(storeObj);
+				 				storeIdArray.push(storeObj.id);
+				 				storeBags.push(itemObj.get("bags"));
+				 			} else {
+				 				var currentBags = storeBags[storeFoundAt];
+				 				currentBags = currentBags + itemObj.get("bags");
+				 				storeBags[storeFoundAt] = currentBags;
+				 			}
+				 			
+				 			var storeCode = storeObj.get("storeCode");
+				 			if (orderNoPrefix.indexOf(storeCode) == -1) { // not found
+				 				orderNoPrefix.push(storeCode);
+				 			}
+				 			totalFoodPrice += itemObj.get("subTotal");
+				 		}
+				 		
+				 		var HBStoreInCart = Parse.Object.extend("HBStoreInCart");
+				 		var promises = [];
+				 		console.log("stores in cart:" + storeObjArray.length);
+						for (var i= 0 ; i<storeObjArray.length ; i++) { 
+					    	var item = new HBStoreInCart();
+					        item.set("cart", cartSaved);
+					        item.set("store", storeObjArray[i]);
+					        item.set("foodTaken", false);
+					        item.set("replied", false);
+					        item.set("bags", Math.ceil(storeBags[i])); //無條件進位
+					        
+					        //todo. 之後再依實際載具運算, Avery . 160621
+					        var bagSize = "S";
+					        if (Math.ceil(storeBags[i]) > 5) {
+					        	bagSize = "L";
+					        }
+					        item.set("bagSize", bagSize);
+					        promises.push(item.save());
+						}
+						return Parse.Promise.when(cartSaved, promises);
+					})
+					.then(function(cartSaved, sicSaved) {
+						var queryAddr = new Parse.Query("HBUserAddressBook");
+						queryAddr.equalTo("objectId", cartSaved.get("sendTo").id);
+						
+						var queryCIC = new Parse.Query("HBCustomerInCart");
+						queryCIC.equalTo("cart", cartSaved);
+						return Parse.Promise.when(cartSaved, queryAddr.find(), queryCIC.find());
+					})
+					.then(function(cartSaved, addrFound, cicFound) {
+						console.log("cic found:" + cicFound.length);
+						console.log("addrFound 2:" + addrFound);
+						if(cicFound.length > 0) {
+							Parse.Object.destroyAll(cicFound,  { 
+								success: function(success) {
+									console.log("delete cic:" + addrFound);
+								}, 
+					            error: function(error) {
+									response.error(error);
+								}
+				        	});
+				        	return Parse.Promise.when(cartSaved, addrFound);
+						} else {
+							return Parse.Promise.when(cartSaved, addrFound);
+						}
+					})
+					.then(function(cartSaved, addrFound) { //create HBCustomerInCart
+						var HBCustomerInCart = Parse.Object.extend("HBCustomerInCart");
+				    	var customerInCart = new HBCustomerInCart();
+				    	customerInCart.set("address", addrFound[0].get("address"));
+				    	customerInCart.set("location", addrFound[0].get("geoLocation"));
+				    	customerInCart.set("contact", cartSaved.get("contactPerson"));
+						customerInCart.set("phone", cartSaved.get("contactPhone"));
+				    	customerInCart.set("addressNote", cartSaved.get("addressNote")); 
+				    	customerInCart.set("cart", cartSaved);
+				    	customerInCart.set("delivered", false);
+				    	customerInCart.set("ETA", cartSaved.get("ETA"));
+				    	return Parse.Promise.when(cartSaved, customerInCart.save());
+					})	
+					.then(function(cartSaved, cicSaved) {
+						
+						var addressBook = cartSaved.get("sendTo");
+						var owner = cartSaved.get("owner");
+						var subject = owner.get("contact") + " 送出新訂單: " + cartSaved.id;
+						var sDate = cartSaved.get("submittedDate");
+						
+						var total = cartSaved.get("totalPrice");
+						var shipping = cartSaved.get("shippingFee");
+						var discount = cartSaved.get("discount");
+						var foodPrice = total - shipping - discount;
+						
+						var localETD = cartSaved.get("ETA");
+						
+						
+						var body = "訂購人: " + owner.get("contact") + ", " + owner.get("phone") + "<BR>";
+						body += "email: " + owner.get("userEmail") + "<BR><BR>";
+						body += "訂單編號: " + cartSaved.id + "<BR>";
+						body += "訂單產生時間: " + (sDate.getMonth() + 1) + "/" + sDate.getDate() + " " + (sDate.getHours()+8) + ":" + sDate.getMinutes() + "<BR><BR>";
+						
+						body += "餐點預計送達時間: " + (localETD.getMonth() + 1) + "/" + localETD.getDate() + " " + (localETD.getHours()+8) + ":" + localETD.getMinutes() + "<BR>";
+						body += "送餐地址: " + addressBook.get("address") + "<BR>";
+						body += "送餐備註: " + addressBook.get("addressNote") + "<BR><BR>";
+						
+						body += "餐費: $" + foodPrice  + "<BR>";
+						body += "運費: $" + shipping + "<BR>";
+						
+						if (cartSaved.get("couponNo") != "") {
+							body += "折價金額: $" + discount + " (折價卷: " + cartSaved.get("couponNo") + ")<BR>";
+						} else {
+							body += "折價金額: $0 (未使用折價卷)<BR>";
+						}
+						
+						body += "刷卡金額: <font color=blue>$" + total + "</font><BR>";
+						body += "歐付寶交易序號: " + cartSaved.get("allPayNo") + "<BR>";
+						body += prop.order_info() + "?objectId=" + cartSaved.id;
+						
+						logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
+						
+						var queryOrder = new Parse.Query("HBOrder");
+						queryOrder.equalTo("shoppingCart", cartSaved);
+						
+						return Parse.Promise.when(cartSaved, queryOrder.find());
+					}).
+					then(function(cartSaved, orderFound) {
+						if(orderFound.length > 0) {
+							Parse.Object.destroyAll(orderFound,  { 
+								success: function(success) {
+									console.log("delete order");
+								}, 
+					            error: function(error) {
+									response.error(error);
+								}
+				        	});
+				        	return Parse.Promise.when(cartSaved);
+						} else {
+							return Parse.Promise.when(cartSaved);
+						}
+					})
+					.then(function(cartSaved){	
+						
+						//create HBOrder
+						var HBOrder = Parse.Object.extend("HBOrder");
+						var order = new HBOrder();
+						order.set("shoppingCart", cartSaved);
+						return Parse.Promise.when(order.save(), cartSaved);
+					})
+					.then(
+						function (orderSaved, cartSaved) {
+							//計算出較精準的到店取餐時間
+							Parse.Cloud.run("calculateETD", 
+									{cartId: cartSaved.id}, 
+									{
+			                        	success: function (result) {
+			                        		response.success(true);
+			                    		}, error: function (error) {
+			                    			logger.send_error(logger.subject("setCartOnBid", "call calculateETD failed."), error);
+											response.error(error);
+			                    		}
+			                        });
+						},
+						function (error) {
+							logger.send_error(logger.subject("setCartOnBid", "update cart error."), error);
+							response.error(error);
+						}
+					);
 			} else {
-				body += "折價金額: $0 (未使用折價卷)<BR>";
+				//已送出的單
+				console.log("已送出的單");
+				response.success(true);
 			}
-			
-			body += "刷卡金額: <font color=blue>$" + total + "</font><BR>";
-			body += "歐付寶交易序號: " + cartSaved.get("allPayNo") + "<BR>";
-			body += prop.order_info() + "?objectId=" + cartSaved.id;
-			
-			logger.send_notify(prop.admin_mail(), prop.mail_cc(), subject, body);
-			
-			return new Parse.Promise.as(cartSaved);
-		}).
-		then(
-			function(cartSaved) {
-				//create HBOrder
-				var HBOrder = Parse.Object.extend("HBOrder");
-				var order = new HBOrder();
-				order.set("shoppingCart", cartSaved);
-				return Parse.Promise.when(order.save(), cartSaved);
-			},
-			function(error) {
-				logger.send_error(logger.subject("setCartOnBid", "create HBOrder error."), error);
-				response.error(error);
-			}
-		)
-		.then(
-			function (orderSaved, cartSaved) {
-				//計算出較精準的到店取餐時間
-				Parse.Cloud.run("calculateETD", 
-						{cartId: cartSaved.id}, 
-						{
-                        	success: function (result) {
-                        		response.success(true);
-                    		}, error: function (error) {
-                    			logger.send_error(logger.subject("setCartOnBid", "call calculateETD failed."), error);
-								response.error(error);
-                    		}
-                        });
-				
-				
-			},
-			function (error) {
-				logger.send_error(logger.subject("setCartOnBid", "update cart error."), error);
-				response.error(error);
-			}
-		);
+		});
+		
 });
 
 //android 結帳前的資料儲存
@@ -458,6 +503,9 @@ Parse.Cloud.define("stageShoppingCart", function (request, response) {
  		    if (request.params.sinceMidnight) {
  		    	cartFound.set("etaSinceMidnight", request.params.sinceMidnight);	
  		    }
+ 		    //if (request.params.paymentMethod) {
+ 		    //	cartFound.set("paymentMethod", request.params.paymentMethod);
+ 		    //}
 			console.log("update shopping cart");
 			return cartFound.save();	 
 		})
@@ -784,9 +832,10 @@ Parse.Cloud.define("isEtaAvailableForAllStore", function(request, response) {
 					
 		      		if (reservationUnit == "minute") {
 		      			//目前時間與訂單時間差距是否足夠
+		      			var currentDate = new Date();
 		      			var currentMinutesFromMidnight = (currentDate.getHours() + 8) * 60 + currentDate.getMinutes();
-		      			var diff = sinceMidnight - currentMinutesFromMidnight; 
-		      			if (diff < storeObj.get("reservation")) {
+		      			var diff = request.params.sinceMidnight - currentMinutesFromMidnight; 
+		      			if (diff < storeArray[i].get("reservation")) {
 		      				storeNeedReservation = true;	
 		      			}
 		      		}

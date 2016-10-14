@@ -43,6 +43,41 @@ Parse.Cloud.define("updateBeeProfile", function (request, response) {
 
 });
 
+//
+Parse.Cloud.define("updateUserProfile", function (request, response) {
+    Parse.Cloud.useMasterKey();
+
+    var query = new Parse.Query(Parse.User);
+    query.get(request.params.userId, {
+        success: function (user) {
+        	var secretPasswordToken = 'eebyrgnuh';
+        	var min = 100000; 
+        	var max = 999999;
+			var num = Math.floor(Math.random() * (max - min + 1)) + min;
+		
+            user.set("bypass", request.params.bypass);
+            if(request.params.bypass) {
+            	user.setPassword(secretPasswordToken + num);
+            }
+            user.save(null, {
+                success: function (bee) {
+                	if(request.params.bypass) {
+                		response.success(num);	
+                	} else {
+                		response.success("");	
+                	}
+                },
+                error: function (bee, error) {
+                    response.error(error);
+                }
+            });
+        }, error: function (error) {
+            response.error(error);
+        }
+    });
+
+});
+
     Parse.Cloud.define("getUserInstallation", function (request, response) {
         console.log("getUserInstallation");
         Parse.Cloud.useMasterKey();

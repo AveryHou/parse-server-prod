@@ -157,3 +157,44 @@ exports.currentDate = function currentDate() {
     
     return fMonth + "/" + fDay;	
 }
+exports.getTotalFoodPrice = function getTotalFoodPrice(foodObj, foodSizeSelected, cupSizeSelected, foodAdditions, largeFoodAdditions) {
+	var foodPrice = foodObj.get("price");
+	if (foodSizeSelected == "10" || cupSizeSelected == "10") { //餐點選大份或大杯
+		foodPrice += foodObj.get("extraPriceForSize");
+	}
+	
+	if (foodAdditions != "" && foodAdditions != null && foodAdditions != 'undefined') {
+		foodPrice += foodObj.get("extraPriceForAdditions") * foodAdditions.length;
+	}
+	
+	if (largeFoodAdditions !="" && largeFoodAdditions != null && largeFoodAdditions != 'undefined') {
+		foodPrice += foodObj.get("extraPriceForLargeAdditions") * largeFoodAdditions.length;
+	}
+	
+    return foodPrice;
+}
+
+exports.foodPickupCode = function foodPickupCode(id) {
+	var length = id.length;
+    console.log("length = " + length);
+
+    var n = 0;
+    var m = 0;
+
+    for (var i = 0; i < length; i++) {
+        n += (i + 1) * id.charCodeAt(i);
+        m += (length - i) * id.charCodeAt(i);
+    }
+
+    n = n % 100;
+    m = m % 100;
+
+    var code = n * 100 + m;
+    var codeStr = code.toString();
+
+    for (var i = 0, difLen = (4 - codeStr.length) ; i < difLen; i++) {
+        codeStr = "0" + codeStr;
+    }
+
+    return codeStr;
+}

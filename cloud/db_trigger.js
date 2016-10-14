@@ -137,6 +137,7 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 		queryCoupon.find({
 	    	success: function(results) {
 	    		if (results.length > 0) {
+	    			Parse.Cloud.useMasterKey();
 	    			var oneCoupon = results[0];
 	    			oneCoupon.set("used", true);
 			    	oneCoupon.set("shoppingCart", request.object);
