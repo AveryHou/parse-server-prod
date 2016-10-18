@@ -3785,3 +3785,72 @@ Parse.Cloud.define("getPickupCode", function(request, response) {
 	console.log(request.params.cartId + " 取餐碼:" + code);
 	response.success(code);	 
 });
+
+//////////////////////////////////////////
+/////// 愛心便當
+///////
+
+//取得店家資料讓愛心便當平台當店家註冊帳號用
+Parse.Cloud.define("getStores", function(request, response) {
+	var query = new Parse.Query("HBFoodStore");
+	query.equalTo("online", true);
+	query.find({
+    	success: function(results) {
+    		var returnResults = [];
+    		for(var i=0 ; i<results.length ; i++) {
+    			var obj = results[i];
+    			if (obj.get("storeName") == "app promotion") continue;
+    			var storeObj = {};
+    			storeObj.id = obj.id;
+    			storeObj.storeName = obj.get("storeName");
+    			storeObj.address = obj.get("address");
+    			storeObj.phone = obj.get("phone");
+    			returnResults.push(storeObj);
+    		}
+    		response.success(returnResults);
+    	},
+    	error: function(err) {
+			logger.send_error(logger.subject("getStores", "food store lookup failed."), error);
+      	  	response.error(err);
+    	}
+  	});
+});
+
+
+//新增路況，提供運送中的小蜜蜂即時資訊
+Parse.Cloud.define("addTrafficReport", function(request, response) {
+	var query = new Parse.Query("HBShoppingCart");
+	query.containedIn("status", ["ongoing", "shipping"]);
+	query.find({
+    	success: function(results) {
+    		var lat = eval(request.params.lat);
+            var lng = eval(request.params.lng);
+            var geoLocation = new Parse.GeoPoint({latitude: lat, longitude: lng});
+            
+    		var HBTrafficAlarmInCart = Parse.Object.extend("HBTrafficAlarmInCart");
+			var itemArray = [];
+			for (var i= 0 ; i<results.length ; i++) {
+				
+		    	var item = new HBTrafficAlarmInCart();
+		        item.set("cart", results[i]);
+		        item.set("trafficType", request.params.reasons);
+		        item.set("atLocation", geoLocation);
+		        itemArray.push(item);
+		    }
+						
+		    Parse.Object.saveAll(itemArray, {
+		        success: function(dataCreated) {
+		            response.success(true);
+		        },
+		        error: function(error) { 
+		            logger.send_error(logger.subject("addTrafficReport", "save HBTrafficAlarmInCart error."), error);
+					response.error(error);		
+		        }
+			});
+    	},
+    	error: function(err) {
+			logger.send_error(logger.subject("addTrafficReport", "find cart failed."), error);
+      	  	response.error(err);
+    	}
+  	});
+});

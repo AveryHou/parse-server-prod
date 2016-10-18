@@ -71,22 +71,7 @@ function send(mailto, mailCc, subject, body) {
 					console.log("send mail to " + mailto  + " successfully");
 				}
 			});
-		/*
-		mailGunService.sendEmail({
-			to: mailto, 
-	  		from: prop.admin_mail() ,
-	  		subject: "[" + prop.env() + "] " + subject,
-	  		html: body
-	  	}, 
-	  	{
-			success: function() {
-		  		console.log("send mail to " + mailto  + " successfully");
-		  	},
-		  	error: function(err) {
-		    	console.error("send mail failed." + JSON.stringify(err));
-		    }
-		});
-		*/
+		
 	} else {
 		console.log("mailCc:" + mailCc);
 		var data = {
@@ -104,23 +89,6 @@ function send(mailto, mailCc, subject, body) {
 					console.log("send mail to " + mailto  + " successfully");
 				}
 			});
-		/*
-		mailGunService.sendEmail({
-			to: mailto, 
-	  		from: prop.admin_mail() ,
-	  		cc: mailCc,
-	  		subject: "[" + prop.env() + "] " + subject,
-	  		html: body
-	  	}, 
-	  	{
-			success: function() {
-		  		console.log("send mail to " + mailto  + " successfully");
-		  	},
-		  	error: function(err) {
-		    	console.error("send mail failed." + JSON.stringify(err));
-		  	}
-		});
-		*/
 	}
 	
 }

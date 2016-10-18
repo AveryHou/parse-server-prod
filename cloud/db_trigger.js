@@ -162,33 +162,35 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 				//	console.log("立即推播:" + pushSent);
 				//}
 				
-				//send push to bees
-		    	Parse.Push.send({
-					channels: [ "bee" ],
-					push_time: pushSent,
-				  	data: {
-					  	title: "外送小蜜蜂",
-					  	alert: prop.push_env() + "HungryBee 有一筆新訂單，訂單編號:" + request.object.id + "。產生時間:" + formattedTime,
-					    sound: "default",
-						badge: "Increment",
-						cartId: request.object.id
-				  	},
-				},
-				{
-				 	success: function() {
-				    	// Push was successful
-				    	console.log("Push was successful");
-				    },
-				  	error: function(error) {
-				    	console.error(JSON.stringify(error));
-				    	mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
-				  	}, 
-				  	useMasterKey: true
-				  }
-				);
+				if(request.object.dirty("status")) { // if status changed
+					console.log("status changed");
+					//send push to bees
+					Parse.Push.send({
+						channels: [ "bee" ],
+						push_time: pushSent,
+					  	data: {
+						  	title: "外送小蜜蜂",
+						  	alert: prop.push_env() + "HungryBee 有一筆新訂單，訂單編號:" + request.object.id + "。產生時間:" + formattedTime,
+						    sound: "default",
+							badge: "Increment",
+							cartId: request.object.id
+					  	},
+					},
+					{
+					 	success: function() {
+					    	// Push was successful
+					    	console.log("Push was successful");
+					    },
+					  	error: function(error) {
+					    	console.error(JSON.stringify(error));
+					    	mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
+					  	},
+					  	useMasterKey: true
+					});
+				}
 	    	},
 	    	error: function(err) {
-				logger.send_error(logger.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
+				mail.send_error(mail.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
 	      	  	response.error(err);
 	    	}
 	  	});
@@ -367,7 +369,7 @@ Parse.Cloud.afterSave("HBRushHour", function(request) {
 						console.log(request.object.get("storeId").id + " store saved:");
 					},
 					error: function(err) {
-						mail.send_error(logger.subject("afterSave HBRushHour", "set store onhold failed."), err); 
+						mail.send_error(mail.subject("afterSave HBRushHour", "set store onhold failed."), err);
 					}		
 				});
 		 	},
@@ -453,4 +455,40 @@ Parse.Cloud.afterSave("HBStoreInCart", function(request) {
 				}
 			);
 	}
+});
+
+// User
+////第一次登入，給一張coupon
+Parse.Cloud.afterSave(Parse.User, function(request) {
+	console.log("login count:" + request.object.get("loginCount"));
+	if(request.object.get("loginCount") == 1) { //第一次登入
+		var query = new Parse.Query("HBCoupon");
+		query.equalTo("owner", request.object);
+		query.equalTo("remark", "first login");
+		query.find().then(
+	  		function(couponFound) {
+	  			if (couponFound.length == 0) { //沒給過coupon
+					Parse.Cloud.useMasterKey();
+					var HBCoupon = Parse.Object.extend("HBCoupon");
+					var coupon = new HBCoupon();
+					coupon.set("owner", request.object);
+					coupon.set("discount", -50);
+					coupon.set("remark", "first login");
+					coupon.save(null,{
+						success: function(couponCreated){
+							console.log("coupon created");
+						},
+						error: function(err) {
+							mail.send_error(mail.subject("afterSave User", "create coupon"), err); 
+						}		
+					});
+	    		} else { //
+	    			console.log("not first time login");
+	    		}
+	  		},
+	  		function(err) {
+	  			mail.send_error(mail.subject("afterSave User", "find coupon"), err);
+			}
+  		);
+  	}	
 });

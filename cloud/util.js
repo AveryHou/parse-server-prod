@@ -157,6 +157,7 @@ exports.currentDate = function currentDate() {
     
     return fMonth + "/" + fDay;	
 }
+
 exports.getTotalFoodPrice = function getTotalFoodPrice(foodObj, foodSizeSelected, cupSizeSelected, foodAdditions, largeFoodAdditions) {
 	var foodPrice = foodObj.get("price");
 	if (foodSizeSelected == "10" || cupSizeSelected == "10") { //餐點選大份或大杯
