@@ -21,11 +21,6 @@ var api = new ParseServer({
   push: {
       ios: [
 	      {
-	        pfx: __dirname + '/push-key/iMac-Certificates.p12', // Dev PFX or P12
-	        bundleId: 'net.hungrybee.HungryBee',
-	        production: false // Dev
-	      },
-	      {
 	        pfx: '/push-key/HBDevPush-Certificates.p12',
 	        bundleId: 'net.hungrybee.HungryBeeDriver',
 	        production: false
