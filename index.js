@@ -19,6 +19,10 @@ var api = new ParseServer({
   serverURL: process.env.SERVER_URL || 'http://hbdevtest01.herokuapp.com/parse',  // Don't forget to change to https if needed
   fileKey: "3ccf8d1a-7407-4832-86cc-4ab5fab42f1c",
   push: {
+  	  android: {
+        senderId: '639572456535',
+        apiKey: 'AIzaSyD4sU7lQqqbcXx9UZ-HprKmJ3LIGXwSSwI'
+      },
       ios: [
 	      {
 	        pfx: __dirname + '/push-key/HBDriver-Dev-Certificate.p12',
