@@ -390,6 +390,8 @@ Parse.Cloud.define("setCartOnBid", function(request, response) {
 					})
 					.then(
 						function (orderSaved, cartSaved) {
+							response.success(true);
+							/*
 							//計算出較精準的到店取餐時間
 							Parse.Cloud.run("calculateETD", 
 									{cartId: cartSaved.id}, 
@@ -401,6 +403,7 @@ Parse.Cloud.define("setCartOnBid", function(request, response) {
 											response.error(error);
 			                    		}
 			                        });
+			                        */
 						},
 						function (error) {
 							logger.send_error(logger.subject("setCartOnBid", "update cart error."), error);

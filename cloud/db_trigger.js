@@ -162,7 +162,7 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 				//	console.log("立即推播:" + pushSent);
 				//}
 				
-				if(request.object.dirty("status")) { // if status changed
+				//if(request.object.dirty("status")) { // if status changed
 					console.log("status changed");
 					//send push to bees
 					Parse.Push.send({
@@ -187,7 +187,7 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 					  	},
 					  	useMasterKey: true
 					});
-				}
+				//}
 	    	},
 	    	error: function(err) {
 				mail.send_error(mail.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
