@@ -302,7 +302,8 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 							var duration = parseInt(leg['duration']['value']);
 							
 							console.log("duration:" + duration);
-							
+							var duration2 = obj.routes[0].legs[0].duration.value;
+							console.log("duration2:" + duration2);
 							
 							var interval = parseInt(duration / (5 * 60)) + 2;
 							var etd = new Date(eta.getTime() - interval * 5 * 60 * 1000);
