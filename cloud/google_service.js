@@ -290,7 +290,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var storeLocation = storeInCarts[0].get("store").get("geoLocation");
 
 					var url = createHttpUrl([originParam(storeLocation), destinationParam(customerLocation)]);
-					console.log("url" + url);
+					console.log("google url:" + url);
 
 					Parse.Cloud.httpRequest({
 						url : url,
@@ -321,18 +321,20 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 
 				} else {
 					var promises = [];
-
+					console.log("1." + new Date());
 					storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
+						console.log("push google url:" + url);
 						var p = Parse.Cloud.httpRequest({
 							url : url
 						});
 
 						promises.push(p);
 					});
-
+					console.log("2." + new Date());
 					Parse.Promise.when(promises).then(function() {
+						console.log("3." + new Date());
 						var maxDistance = 0;
 						var maxIndex = 0;
 						for (var i = 0,
@@ -357,11 +359,12 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 
 						var url = createHttpUrl([originParam(storeInCarts[maxIndex].get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location')), waypointsParam(wayPoints)]);
 
-						console.log(url);
+						console.log("4.push google url:" + url);
 
 						Parse.Cloud.httpRequest({
 							url : url,
 							success : function(directions) {
+								console.log("5." + new Date());
 								var legs = directions.data['routes'][0]['legs'];
 								var waypointOrder = directions.data['routes'][0]['waypoint_order'];
 								var etd = new Date(eta.getTime() - 5 * 60 * 1000);
