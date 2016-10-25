@@ -341,20 +341,21 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						promises.push(p);
 					});
 					
-					Parse.Promise.when(promises).then(function(results) {
-						console.log("results=" + JSON.parse(results));
+					Parse.Promise.when(promises).then(function() {
+						//console.log("results=" + JSON.parse(results));
 						var maxDistance = 0;
 						var maxIndex = 0;
 						for (var i = 0,
 						    len = arguments.length; i < len; i++) {
 						    	
 						    console.log("1arguments[i]:" + arguments[i]);
+						    /*
 						    console.log("2arguments[i]:" + arguments[i].data);
 						    console.log("3arguments[i]:" + arguments[i].data['routes']);
 						    console.log("4arguments[i]:" + arguments[i].data['routes'][0]);
 						    console.log("5arguments[i]:" + arguments[i].data['routes'][0]['legs']);
 						    console.log("6arguments[i]:" + arguments[i].data['routes'][0]['legs'][0]);
-						    
+						    */
 						    	
 							var leg = arguments[i].data['routes'][0]['legs'][0];
 							var distance = leg['distance']['value'];
@@ -384,7 +385,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						Parse.Cloud.httpRequest({
 							url : url,
 							success : function(directions) {
-								console.log("promises done5." + new Date());
+								
 								var legs = directions.data['routes'][0]['legs'];
 								var waypointOrder = directions.data['routes'][0]['waypoint_order'];
 								var etd = new Date(eta.getTime() - 5 * 60 * 1000);
