@@ -293,8 +293,15 @@ Parse.Cloud.define("createShoppingCart", function(request, response) {
 							success: function(result){
 								cartCreated.set("shortenUrl", result);
 								cartCreated.set("etaString", "");
-								cartCreated.save();
-								response.success(cartCreated);
+								cartCreated.save(null,{
+									success: function(cartUpdated){
+										response.success(cartUpdated);
+								    },
+									error: function(err) {
+										logger.send_error(logger.subject("createShoppingCart", "save new cart"), err); 
+										response.error(err);
+									}		
+								});
 							},
 						 	error: function(error) {
 								response.error(error);
