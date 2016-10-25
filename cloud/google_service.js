@@ -295,12 +295,12 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					Parse.Cloud.httpRequest({
 						url : url,
 						success : function(directions) {
-							console.log("1arguments[i]:" + directions);
-						    console.log("2arguments[i]:" + directions.data);
-						    console.log("3arguments[i]:" + directions.data['routes']);
-						    console.log("4arguments[i]:" + directions.data['routes'][0]);
-						    console.log("5arguments[i]:" + directions.data['routes'][0]['legs']);
-						    console.log("6arguments[i]:" + directions.data['routes'][0]['legs'][0]);
+							//console.log("1arguments[i]:" + directions);
+						    console.log("2arguments[i]:" + JSON.stringify(directions.data));
+						    //console.log("3arguments[i]:" + directions.data['routes']);
+						    //console.log("4arguments[i]:" + directions.data['routes'][0]);
+						    //console.log("5arguments[i]:" + directions.data['routes'][0]['legs']);
+						    //console.log("6arguments[i]:" + directions.data['routes'][0]['legs'][0]);
 							
 							
 							var leg = directions.data['routes'][0]['legs'][0];
