@@ -295,6 +295,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					Parse.Cloud.httpRequest({
 						url : url,
 						success : function(directions) {
+							console.log("directions:" + JSON.stringify(directions));
 							var leg = directions.data['routes'][0]['legs'][0];
 							var duration = parseInt(leg['duration']['value']);
 							var interval = parseInt(duration / (5 * 60)) + 2;
