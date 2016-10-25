@@ -341,7 +341,13 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						for (var i = 0,
 						    len = arguments.length; i < len; i++) {
 						    	
-						    console.log("arguments[i]:" + arguments[i]);
+						    console.log("1arguments[i]:" + arguments[i]);
+						    console.log("2arguments[i]:" + arguments[i].data);
+						    console.log("3arguments[i]:" + arguments[i].data['routes']);
+						    console.log("4arguments[i]:" + arguments[i].data['routes'][0]);
+						    console.log("5arguments[i]:" + arguments[i].data['routes'][0]['legs']);
+						    console.log("6arguments[i]:" + arguments[i].data['routes'][0]['legs'][0]);
+						    
 						    	
 							var leg = arguments[i].data['routes'][0]['legs'][0];
 							var distance = leg['distance']['value'];
