@@ -340,6 +340,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						var maxIndex = 0;
 						for (var i = 0,
 						    len = arguments.length; i < len; i++) {
+						    	
+						    console.log("arguments[i]:" + arguments[i]);
+						    	
 							var leg = arguments[i].data['routes'][0]['legs'][0];
 
 							var distance = leg['distance']['value'];
@@ -347,6 +350,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 								maxDistance = distance;
 								maxIndex = i;
 							}
+							console.log("maxDistance:" + maxDistance);
 						}
 						console.log("promises done2." + new Date());
 						
