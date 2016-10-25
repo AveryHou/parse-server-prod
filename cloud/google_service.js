@@ -330,44 +330,51 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 				} else {
 					console.log("多個店家");
 					var promises = [];
+					var requestUrl = [];
+					console.log("AAAA");
 					storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
+						requestUrl.push(url);
 						console.log("url A:" + url);
-						var p = Parse.Cloud.httpRequest({
-							url : url
-						});
+						//var p = Parse.Cloud.httpRequest({
+						//	url : url
+						//});
 
-						promises.push(p);
+						//promises.push(p);
+					})
+					
+					var maxDistance = 0;
+					var maxIndex = 0;
+					var promise = Parse.Promise.as();
+				  	_.each(requestUrl, function(aUrl, idx) {
+						promise = promise.then(function() {
+					    	Parse.Cloud.httpRequest({
+								url : aUrl,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = idx;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							}); 
+					    });
 					});
 					
-					Parse.Promise.when(promises).then(function() {
+					console.log("BBBB");
+					
+					
+					
+					Parse.Promise.when(promise).then(function() {
+					//Parse.Promise.when(promises).then(function() {
 						//console.log("results=" + JSON.parse(results));
-						var maxDistance = 0;
-						var maxIndex = 0;
-						for (var i = 0,
-						    len = arguments.length; i < len; i++) {
-						    	
-						    console.log("1arguments[i]:" + arguments[i]);
-						    /*
-						    console.log("2arguments[i]:" + arguments[i].data);
-						    console.log("3arguments[i]:" + arguments[i].data['routes']);
-						    console.log("4arguments[i]:" + arguments[i].data['routes'][0]);
-						    console.log("5arguments[i]:" + arguments[i].data['routes'][0]['legs']);
-						    console.log("6arguments[i]:" + arguments[i].data['routes'][0]['legs'][0]);
-						    */
-						    	
-							var leg = arguments[i].data['routes'][0]['legs'][0];
-							var distance = leg['distance']['value'];
-							
-							console.log("distance:" + distance);
-							if (distance > maxDistance) {
-								maxDistance = distance;
-								maxIndex = i;
-							}
-							console.log("maxDistance:" + maxDistance);
-						}
-						console.log("promises done2." + new Date());
 						
 						var wayPoints = [];
 						var wayPointsRefference = [];
