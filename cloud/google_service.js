@@ -346,10 +346,12 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						    	
 							var leg = arguments[i].data['routes'][0]['legs'][0];
 							
-							console.log("leg:" + JSON.stringify(leg));
+							console.log("leg:" + leg);
 							
 							
 							var distance = leg['distance']['value'];
+							
+							console.log("distance:" + distance);
 							if (distance > maxDistance) {
 								maxDistance = distance;
 								maxIndex = i;
