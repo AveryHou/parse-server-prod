@@ -331,7 +331,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					console.log("多個店家");
 					var promises = [];
 					var requestUrl = [];
-					console.log("AAAA");
+					
 					storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
