@@ -333,7 +333,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						promises.push(p);
 					});
 					
+					console.log("before promises:" + new Date());
 					Parse.Promise.when(promises).then(function() {
+						console.log("promises done." + new Date());
 						var maxDistance = 0;
 						var maxIndex = 0;
 						for (var i = 0,
