@@ -325,7 +325,18 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 					});
 			    });
 		    }).then(function() {
-		       // console.log("DONE HERE");
+		    	console.log("notify store done");
+		    	//計算出較精準的到店取餐時間
+				Parse.Cloud.run("calculateETD", 
+						{cartId: request.object.get("shoppingCart").id}, 
+						{
+                        	success: function (result) {
+                        		response.success(true);
+                    		}, error: function (error) {
+                    			logger.send_error(logger.subject("afterSave HBOrder", "call calculateETD failed."), error);
+								response.error(error);
+                    		}
+                        });
 		    });	
 	    }
 	});
