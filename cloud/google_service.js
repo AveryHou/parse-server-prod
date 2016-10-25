@@ -348,8 +348,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var maxIndex = 0;
 					var promise = Parse.Promise.as();
 				  	_.each(requestUrl, function(aUrl, idx) {
-						promise = promise.then(function() {
-					    	Parse.Cloud.httpRequest({
+				  		console.log("A111:" + aUrl);
+				  		
+						promise = Parse.Cloud.httpRequest({
 								url : aUrl,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
@@ -365,7 +366,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 									response.error(error);
 								}
 							}); 
-					    });
+					    
 					});
 					
 					console.log("BBBB");
