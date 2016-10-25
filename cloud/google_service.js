@@ -335,7 +335,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					
 					console.log("before promises:" + new Date());
 					Parse.Promise.when(promises).then(function() {
-						console.log("promises done1." + new Date());
+						console.log("promises done1." + new Date() + " #arguments.length:" + arguments.length);
 						var maxDistance = 0;
 						var maxIndex = 0;
 						for (var i = 0,
@@ -393,7 +393,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 								storeInCart.set('ETD', etd);
 
 								saveStoreInCarts.push(storeInCart);
-
+							
 								cart.set('ETD', etd);
 								Parse.Promise.when(cart.save()).then(function() {
 									Parse.Object.saveAll(saveStoreInCarts, {
