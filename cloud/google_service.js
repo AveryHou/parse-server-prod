@@ -357,12 +357,13 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 											maxDistance = currentDistance;
 											maxIndex = i;
 										}
-										
+										/*
 										if(i == storeInCarts.length-1) {
 											console.log("maxIndex:" + maxIndex);	
 											console.log("maxDistance:" + maxDistance);
 											console.log("start Promises in Series");
 										}
+										*/
 									},
 									function(httpResponse) {
 										console.error('Request failed with response code ' + httpResponse.status);
@@ -373,6 +374,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						return promise;
 					}).then(function(){
 						console.log("OK");
+						console.log("maxIndex:" + maxIndex);	
+						console.log("maxDistance:" + maxDistance);
+						console.log("start Promises in Series");
 						response.success("success");
 						
 					});
