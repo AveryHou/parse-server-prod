@@ -338,43 +338,46 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 	
 					
 					var promise = Parse.Promise.as();
-						
-					for(var i=0 ; i<storeInCarts.length ; i++) {
-						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
-						console.log("store " + i + " location:" + originParam(locationOfStore));
-						
-						var locationOfCustomer = customerInCarts[0].get('location');
-						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-						//console.log(i + " query:" + url);
-						promise = promise.then(function() {
-							Parse.Cloud.httpRequest({
-								url : url,
-							}).then(
-								function(directions) {
-									var obj = JSON.parse(directions.text);
-									var currentDistance = obj.routes[0].legs[0].distance.value;
-									if (currentDistance > maxDistance) {
-										maxDistance = currentDistance;
-										maxIndex = i;
+					promise.then(function() {
+						for(var i=0 ; i<storeInCarts.length ; i++) {
+							var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
+							console.log("store " + i + " location:" + originParam(locationOfStore));
+							
+							var locationOfCustomer = customerInCarts[0].get('location');
+							var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
+							//console.log(i + " query:" + url);
+							promise = promise.then(function() {
+								return Parse.Cloud.httpRequest({
+									url : url,
+								}).then(
+									function(directions) {
+										var obj = JSON.parse(directions.text);
+										var currentDistance = obj.routes[0].legs[0].distance.value;
+										if (currentDistance > maxDistance) {
+											maxDistance = currentDistance;
+											maxIndex = i;
+										}
+										
+										if(i == storeInCarts.length-1) {
+											console.log("maxIndex:" + maxIndex);	
+											console.log("maxDistance:" + maxDistance);
+											console.log("start Promises in Series");
+										}
+									},
+									function(httpResponse) {
+										console.error('Request failed with response code ' + httpResponse.status);
 									}
-									
-									if(i == storeInCarts.length-1) {
-										console.log("maxIndex:" + maxIndex);	
-										console.log("maxDistance:" + maxDistance);
-										console.log("start Promises in Series");
-										response.success("success");	
-									}
-									
-								},
-								function(httpResponse) {
-									console.error('Request failed with response code ' + httpResponse.status);
-								}
-							);
-						});
+								);
+							});
+						}
+						return promise;
+					}).then({
+						console.log("OK");
+						response.success("success");
 						
-						
-						
-					}	
+					});
+					
+					
 					
 							
 							/*
