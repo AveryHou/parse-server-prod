@@ -335,26 +335,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var maxIndex = 0;
 					//storeInCarts.forEach(function(storeInCart, index, array) {
 					
-					
-					
-					var query = new Parse.Query("Comments");
-query.equalTo("post", 123);
-
-query.find().then(function(results) {
-  // Create a trivial resolved promise as a base case.
-  var promise = Parse.Promise.as();
-  _.each(results, function(result) {
-    // For each item, extend the promise with a function to delete it.
-    promise = promise.then(function() {
-      // Return a promise that will be resolved when the delete is finished.
-      return result.destroy();
-    });
-  });
-  return promise;
-
-}).then(function() {
-  // Every comment was deleted.
-});
+	
 					
 					var promise = Parse.Promise.as();
 						
@@ -371,27 +352,30 @@ query.find().then(function(results) {
 						promise = promise.then(function() {
 							Parse.Cloud.httpRequest({
 								url : url,
-								success : function(directions) {
+							}).then(
+								function(directions) {
 									var obj = JSON.parse(directions.text);
-									
 									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log(i + " currentDistance:" + currentDistance);
 									if (currentDistance > maxDistance) {
 										maxDistance = currentDistance;
-										console.log("innert maxDistance:" + maxDistance);	
 										maxIndex = i;
 									}
+									console.log("maxIndex:" + maxIndex); 
+									
+									
+									if(i==storeInCarts.length-1) {
+										console.log("maxIndex:" + maxIndex);	
+										console.log("maxDistance:" + maxDistance);		
+									}
+									
 								},
-								error : function(error) {
-									response.error(error);
+								function(httpResponse) {
+									console.error('Request failed with response code ' + httpResponse.status);
 								}
-							});
+							);
 						});
 						
-						promise.then(function(){
-							console.log("maxIndex:" + maxIndex);	
-							console.log("maxDistance:" + maxDistance);		
-						});
+						
 						
 					}	
 					
