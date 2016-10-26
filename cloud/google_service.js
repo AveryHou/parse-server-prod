@@ -331,15 +331,29 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					console.log("多個店家");
 					var promises = [];
 					var requestUrl = [];
-					
+					var maxDistance = 0;
+					var maxIndex = 0;
 					storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
 						
-						if(index == 0) {
-							requestUrl.push(url);
-							console.log("url A:" + url);
-						}
+						var promise = Parse.Cloud.httpRequest({
+								url : aUrl,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log(index +". currentDistance:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = idx;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							});
+							
 						//var p = Parse.Cloud.httpRequest({
 						//	url : url
 						//});
@@ -348,6 +362,8 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					})
 					
 					console.log("start Promises in Series");
+					response.success("success");
+					/*
 					var maxDistance = 0;
 					var maxIndex = 0;
 					var promise = Parse.Promise.as();
@@ -457,7 +473,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						});
 
 					});
-
+					*/
 				}
 
 			});
