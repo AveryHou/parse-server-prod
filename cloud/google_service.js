@@ -333,12 +333,48 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var requestUrl = [];
 					var maxDistance = 0;
 					var maxIndex = 0;
-					storeInCarts.forEach(function(storeInCart, index, array) {
+					//storeInCarts.forEach(function(storeInCart, index, array) {
 
-						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
+						var urla = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
 						console.log(index +". url:" + url);
 						var promise = Parse.Cloud.httpRequest({
-								url : aUrl,
+								url : urla,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = idx;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							});
+							
+						var urlb = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[1].get('location'))]);
+						var promise = Parse.Cloud.httpRequest({
+								url : urlb,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = idx;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							});
+							
+						var urlc = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[2].get('location'))]);
+						var promise = Parse.Cloud.httpRequest({
+								url : urlc,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
 									
@@ -359,7 +395,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						//});
 
 						//promises.push(p);
-					})
+					//});
+					
+					
 					
 					console.log("start Promises in Series");
 					response.success("success");
