@@ -339,6 +339,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					
 					var promise = Parse.Promise.as();
 					promise.then(function() {
+						var promise1 = Parse.Promise.as();
 						for(var i=0 ; i<storeInCarts.length ; i++) {
 							var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
 							console.log("store " + i + " location:" + originParam(locationOfStore));
