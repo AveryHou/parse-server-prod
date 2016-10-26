@@ -344,14 +344,14 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						
 						
 						var urla = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-						console.log("query url:" + urla);
+						console.log("query a:" + urla);
 						var promise = Parse.Cloud.httpRequest({
 								url : urla,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
 									
 									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance:" + currentDistance);
+									console.log("currentDistance 1:" + currentDistance);
 									if (currentDistance > maxDistance) {
 										maxDistance = currentDistance;
 										maxIndex = 0;
@@ -363,6 +363,57 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 							});
 							
 							
+						var locationOfStore1 = storeInCarts[1].get("store").get("geoLocation");
+						console.log("locationOfStore1:" + originParam(locationOfStore1));
+						
+						var locationOfCustomer1 = customerInCarts[0].get('location');
+						console.log("locationOfCustomer1:" + destinationParam(locationOfCustomer1));
+						
+						
+						var urlb = createHttpUrl([originParam(locationOfStore1), destinationParam(locationOfCustomer1)]);
+						console.log("query b:" + urlb);
+						var promise = Parse.Cloud.httpRequest({
+								url : urlb,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance 2:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = 0;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							});
+							
+						var locationOfStore2 = storeInCarts[2].get("store").get("geoLocation");
+						console.log("locationOfStore2:" + originParam(locationOfStore2));
+						
+						var locationOfCustomer2 = customerInCarts[0].get('location');
+						console.log("locationOfCustomer2:" + destinationParam(locationOfCustomer2));
+						
+						
+						var urlc = createHttpUrl([originParam(locationOfStore2), destinationParam(locationOfCustomer2)]);
+						console.log("query c:" + urlc);
+						var promise = Parse.Cloud.httpRequest({
+								url : urlc,
+								success : function(directions) {
+									var obj = JSON.parse(directions.text);
+									
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance 3:" + currentDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = 0;
+									}
+								},
+								error : function(error) {
+									response.error(error);
+								}
+							});	
 					
 					
 					
