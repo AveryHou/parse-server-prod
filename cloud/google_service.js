@@ -371,7 +371,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 							});
 						}
 						return promise;
-					}).then({
+					}).then(function(){
 						console.log("OK");
 						response.success("success");
 						
