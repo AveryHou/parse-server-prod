@@ -335,34 +335,37 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var maxIndex = 0;
 					//storeInCarts.forEach(function(storeInCart, index, array) {
 						
-						
-						var locationOfStore = storeInCarts[0].get("store").get("geoLocation");
+					for(var i=0 ; i<storeInCarts.length ; i++) {
+						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
 						console.log("locationOfStore:" + originParam(locationOfStore));
 						
 						var locationOfCustomer = customerInCarts[0].get('location');
 						console.log("locationOfCustomer:" + destinationParam(locationOfCustomer));
 						
 						
-						var urla = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-						console.log("query a:" + urla);
+						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
+						console.log(i + " query:" + url);
 						var promise = Parse.Cloud.httpRequest({
-								url : urla,
+								url : url,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
 									
 									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance 1:" + currentDistance);
+									console.log(i + " currentDistance:" + currentDistance);
 									if (currentDistance > maxDistance) {
 										maxDistance = currentDistance;
-										maxIndex = 0;
+										maxIndex = i;
 									}
 								},
 								error : function(error) {
 									response.error(error);
 								}
 							});
+					}	
+					console.log("maxIndex:" + maxIndex);	
+					console.log("maxDistance:" + maxDistance);	
 							
-							
+							/*
 						var locationOfStore1 = storeInCarts[1].get("store").get("geoLocation");
 						console.log("locationOfStore1:" + originParam(locationOfStore1));
 						
@@ -414,7 +417,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 									response.error(error);
 								}
 							});	
-					
+					*/
 					
 					
 					console.log("start Promises in Series");
