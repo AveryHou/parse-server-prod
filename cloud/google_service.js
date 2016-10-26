@@ -336,14 +336,14 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var url = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
-						
+						console.log(index +". url:" + url);
 						var promise = Parse.Cloud.httpRequest({
 								url : aUrl,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
 									
 									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log(index +". currentDistance:" + currentDistance);
+									console.log("currentDistance:" + currentDistance);
 									if (currentDistance > maxDistance) {
 										maxDistance = currentDistance;
 										maxIndex = idx;
