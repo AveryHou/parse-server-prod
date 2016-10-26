@@ -336,7 +336,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					//storeInCarts.forEach(function(storeInCart, index, array) {
 						
 						
-						var locationOfStore = storeInCart.get("store").get("geoLocation");
+						var locationOfStore = storeInCarts[0].get("store").get("geoLocation");
 						console.log("locationOfStore:" + originParam(locationOfStore));
 						
 						var locationOfCustomer = customerInCarts[0].get('location');
