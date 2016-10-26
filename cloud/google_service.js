@@ -359,6 +359,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 											maxDistance = currentDistance;
 											maxIndex = i;
 										}
+										promise1.resolve();
 										/*
 										if(i == storeInCarts.length-1) {
 											console.log("maxIndex:" + maxIndex);	
