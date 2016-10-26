@@ -346,7 +346,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 							var locationOfCustomer = customerInCarts[0].get('location');
 							var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
 							console.log(i + " query:" + url);
-							promise = promise.then(function() {
+							var promise1 = promise.then(function() {
 								return Parse.Cloud.httpRequest({
 									url : url,
 								}).then(
@@ -372,7 +372,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 								);
 							});
 						}
-						return promise;
+						return promise1;
 					}).then(function(){
 						console.log("OK");
 						console.log("maxIndex:" + maxIndex);	
