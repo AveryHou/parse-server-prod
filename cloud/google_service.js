@@ -336,7 +336,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					//storeInCarts.forEach(function(storeInCart, index, array) {
 
 						var urla = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location'))]);
-						console.log(index +". url:" + url);
+						console.log(index +". url:" + urla);
 						var promise = Parse.Cloud.httpRequest({
 								url : urla,
 								success : function(directions) {
@@ -354,164 +354,13 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 								}
 							});
 							
-						var urlb = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[1].get('location'))]);
-						var promise = Parse.Cloud.httpRequest({
-								url : urlb,
-								success : function(directions) {
-									var obj = JSON.parse(directions.text);
-									
-									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance:" + currentDistance);
-									if (currentDistance > maxDistance) {
-										maxDistance = currentDistance;
-										maxIndex = idx;
-									}
-								},
-								error : function(error) {
-									response.error(error);
-								}
-							});
 							
-						var urlc = createHttpUrl([originParam(storeInCart.get("store").get("geoLocation")), destinationParam(customerInCarts[2].get('location'))]);
-						var promise = Parse.Cloud.httpRequest({
-								url : urlc,
-								success : function(directions) {
-									var obj = JSON.parse(directions.text);
-									
-									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance:" + currentDistance);
-									if (currentDistance > maxDistance) {
-										maxDistance = currentDistance;
-										maxIndex = idx;
-									}
-								},
-								error : function(error) {
-									response.error(error);
-								}
-							});
-							
-						//var p = Parse.Cloud.httpRequest({
-						//	url : url
-						//});
-
-						//promises.push(p);
-					//});
 					
 					
 					
 					console.log("start Promises in Series");
 					response.success("success");
-					/*
-					var maxDistance = 0;
-					var maxIndex = 0;
-					var promise = Parse.Promise.as();
-				  	_.each(requestUrl, function(aUrl, idx) {
-				  		console.log("A111:" + aUrl);
-				  		
-						promise = promise.then(function() {
-								Parse.Cloud.httpRequest({
-									url : aUrl,
-									success : function(directions) {
-										var obj = JSON.parse(directions.text);
-										
-										var currentDistance = obj.routes[0].legs[0].distance.value;
-										console.log("currentDistance:" + currentDistance);
-										if (currentDistance > maxDistance) {
-											maxDistance = currentDistance;
-											maxIndex = idx;
-										}
-									},
-									error : function(error) {
-										response.error(error);
-									}
-								}); 
-							
-							});
-					    
-					});
 					
-					console.log("BBBB");
-					
-					
-					
-					Parse.Promise.when(promise).then(function() {
-					//Parse.Promise.when(promises).then(function() {
-						//console.log("results=" + JSON.parse(results));
-						
-						var wayPoints = [];
-						var wayPointsRefference = [];
-						storeInCarts.forEach(function(storeInCart, index, array) {
-							if (index !== maxIndex) {
-								wayPoints.push(storeInCart.get("store").get("geoLocation"));
-								wayPointsRefference.push(storeInCart);
-							}
-						});
-						console.log("promises done3." + new Date());
-						var url = createHttpUrl([originParam(storeInCarts[maxIndex].get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location')), waypointsParam(wayPoints)]);
-						console.log("promises done4." + new Date());
-						console.log("url B:" + url);
-
-						Parse.Cloud.httpRequest({
-							url : url,
-							success : function(directions) {
-								
-								var legs = directions.data['routes'][0]['legs'];
-								var waypointOrder = directions.data['routes'][0]['waypoint_order'];
-								var etd = new Date(eta.getTime() - 5 * 60 * 1000);
-								var saveStoreInCarts = [];
-
-								for (var i = waypointOrder.length - 1,
-								    legsIndex = legs.length - 1; i >= 0; i--, legsIndex--) {
-
-									var duration = legs[legsIndex]['duration']['value'];
-									var interval = parseInt(duration / (5 * 60)) + 1;
-									etd = new Date(etd.getTime() - interval * 5 * 60 * 1000);
-
-									var storeInCart = wayPointsRefference[waypointOrder[i]];
-									storeInCart.set('ETD', etd);
-
-									saveStoreInCarts.push(storeInCart);
-								}
-
-								var duration = legs[0]['duration']['value'];
-								var interval = parseInt(duration / (5 * 60)) + 1;
-								etd = new Date(etd.getTime() - interval * 5 * 60 * 1000);
-
-								var storeInCart = storeInCarts[maxIndex];
-								storeInCart.set('ETD', etd);
-
-								saveStoreInCarts.push(storeInCart);
-							
-								cart.set('ETD', etd);
-								Parse.Promise.when(cart.save()).then(function() {
-									Parse.Object.saveAll(saveStoreInCarts, {
-										success : function(list) {
-											response.success("success");
-										},
-										error : function(error) {
-											response.success("error");
-										},
-									});
-								});
-
-
-								// Parse.Object.saveAll(saveStoreInCarts, {
-									// success : function(list) {
-										// response.success("success");
-									// },
-									// error : function(error) {
-										// response.success("error");
-									// },
-								// });
-
-							},
-							error : function(error) {
-								response.error(error);
-							}
-						});
-
-					});
-					*/
 				}
 
 			});
