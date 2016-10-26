@@ -341,13 +341,11 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						
 					for(var i=0 ; i<storeInCarts.length ; i++) {
 						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
-						console.log("store " + i + "location:" + originParam(locationOfStore));
+						console.log("store " + i + " location:" + originParam(locationOfStore));
 						
 						var locationOfCustomer = customerInCarts[0].get('location');
-						
-						
 						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-						console.log(i + " query:" + url);
+						//console.log(i + " query:" + url);
 						promise = promise.then(function() {
 							Parse.Cloud.httpRequest({
 								url : url,
@@ -360,9 +358,11 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 										maxIndex = i;
 									}
 									
-									if(i==storeInCarts.length-1) {
+									if(i == storeInCarts.length-1) {
 										console.log("maxIndex:" + maxIndex);	
-										console.log("maxDistance:" + maxDistance);		
+										console.log("maxDistance:" + maxDistance);
+										console.log("start Promises in Series");
+										response.success("success");	
 									}
 									
 								},
@@ -432,8 +432,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					*/
 					
 					
-					console.log("start Promises in Series");
-					response.success("success");
+					
 					
 				}
 
