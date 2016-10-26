@@ -354,7 +354,7 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 									console.log("currentDistance:" + currentDistance);
 									if (currentDistance > maxDistance) {
 										maxDistance = currentDistance;
-										maxIndex = idx;
+										maxIndex = 0;
 									}
 								},
 								error : function(error) {
