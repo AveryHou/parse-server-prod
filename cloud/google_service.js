@@ -334,6 +334,29 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var maxDistance = 0;
 					var maxIndex = 0;
 					//storeInCarts.forEach(function(storeInCart, index, array) {
+					
+					
+					
+					var query = new Parse.Query("Comments");
+query.equalTo("post", 123);
+
+query.find().then(function(results) {
+  // Create a trivial resolved promise as a base case.
+  var promise = Parse.Promise.as();
+  _.each(results, function(result) {
+    // For each item, extend the promise with a function to delete it.
+    promise = promise.then(function() {
+      // Return a promise that will be resolved when the delete is finished.
+      return result.destroy();
+    });
+  });
+  return promise;
+
+}).then(function() {
+  // Every comment was deleted.
+});
+					
+					var promise = Parse.Promise.as();
 						
 					for(var i=0 ; i<storeInCarts.length ; i++) {
 						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
@@ -345,7 +368,8 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						
 						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
 						console.log(i + " query:" + url);
-						var promise = Parse.Cloud.httpRequest({
+						promise = promise.then(function() {
+							Parse.Cloud.httpRequest({
 								url : url,
 								success : function(directions) {
 									var obj = JSON.parse(directions.text);
@@ -362,9 +386,15 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 									response.error(error);
 								}
 							});
+						});
+						
+						promise.then(function(){
+							console.log("maxIndex:" + maxIndex);	
+							console.log("maxDistance:" + maxDistance);		
+						});
+						
 					}	
-					console.log("maxIndex:" + maxIndex);	
-					console.log("maxDistance:" + maxDistance);	
+					
 							
 							/*
 						var locationOfStore1 = storeInCarts[1].get("store").get("geoLocation");
