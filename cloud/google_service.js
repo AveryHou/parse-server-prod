@@ -387,70 +387,65 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						}
 						console.log("maxIndex:" + maxIndex);	
 						console.log("maxDistance:" + maxDistance);
-						response.success("success");
+						var wayPoints = [];
+						var wayPointsRefference = [];
+						storeInCarts.forEach(function(storeInCart, index, array) {
+							if (index !== maxIndex) {
+								wayPoints.push(storeInCart.get("store").get("geoLocation"));
+								wayPointsRefference.push(storeInCart);
+							}
+						});
+
+						var url = createHttpUrl([originParam(storeInCarts[maxIndex].get("store").get("geoLocation")), destinationParam(customerInCarts[0].get('location')), waypointsParam(wayPoints)]);
+
+						Parse.Cloud.httpRequest({
+							url : url,
+							success : function(directions) {
+								var legs = directions.data['routes'][0]['legs'];
+								var waypointOrder = directions.data['routes'][0]['waypoint_order'];
+								var etd = new Date(eta.getTime() - 5 * 60 * 1000);
+								var saveStoreInCarts = [];
+
+								for (var i = waypointOrder.length - 1,
+								    legsIndex = legs.length - 1; i >= 0; i--, legsIndex--) {
+
+									var duration = legs[legsIndex]['duration']['value'];
+									var interval = parseInt(duration / (5 * 60)) + 1;
+									etd = new Date(etd.getTime() - interval * 5 * 60 * 1000);
+
+									var storeInCart = wayPointsRefference[waypointOrder[i]];
+									storeInCart.set('ETD', etd);
+
+									saveStoreInCarts.push(storeInCart);
+								}
+
+								var duration = legs[0]['duration']['value'];
+								var interval = parseInt(duration / (5 * 60)) + 1;
+								etd = new Date(etd.getTime() - interval * 5 * 60 * 1000);
+
+								var storeInCart = storeInCarts[maxIndex];
+								storeInCart.set('ETD', etd);
+
+								saveStoreInCarts.push(storeInCart);
+
+								cart.set('ETD', etd);
+								Parse.Promise.when(cart.save()).then(function() {
+									Parse.Object.saveAll(saveStoreInCarts, {
+										success : function(list) {
+											response.success("success");
+										},
+										error : function(error) {
+											response.success("error");
+										},
+									});
+								});
+							},
+							error : function(error) {
+								response.error(error);
+							}
+						});
 					});
-					
-					
-					
-							
-							/*
-						var locationOfStore1 = storeInCarts[1].get("store").get("geoLocation");
-						console.log("locationOfStore1:" + originParam(locationOfStore1));
-						
-						var locationOfCustomer1 = customerInCarts[0].get('location');
-						console.log("locationOfCustomer1:" + destinationParam(locationOfCustomer1));
-						
-						
-						var urlb = createHttpUrl([originParam(locationOfStore1), destinationParam(locationOfCustomer1)]);
-						console.log("query b:" + urlb);
-						var promise = Parse.Cloud.httpRequest({
-								url : urlb,
-								success : function(directions) {
-									var obj = JSON.parse(directions.text);
-									
-									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance 2:" + currentDistance);
-									if (currentDistance > maxDistance) {
-										maxDistance = currentDistance;
-										maxIndex = 0;
-									}
-								},
-								error : function(error) {
-									response.error(error);
-								}
-							});
-							
-						var locationOfStore2 = storeInCarts[2].get("store").get("geoLocation");
-						console.log("locationOfStore2:" + originParam(locationOfStore2));
-						
-						var locationOfCustomer2 = customerInCarts[0].get('location');
-						console.log("locationOfCustomer2:" + destinationParam(locationOfCustomer2));
-						
-						
-						var urlc = createHttpUrl([originParam(locationOfStore2), destinationParam(locationOfCustomer2)]);
-						console.log("query c:" + urlc);
-						var promise = Parse.Cloud.httpRequest({
-								url : urlc,
-								success : function(directions) {
-									var obj = JSON.parse(directions.text);
-									
-									var currentDistance = obj.routes[0].legs[0].distance.value;
-									console.log("currentDistance 3:" + currentDistance);
-									if (currentDistance > maxDistance) {
-										maxDistance = currentDistance;
-										maxIndex = 0;
-									}
-								},
-								error : function(error) {
-									response.error(error);
-								}
-							});	
-					*/
-					
-					
-					
-					
-				}
+				} //~else
 
 			});
 
