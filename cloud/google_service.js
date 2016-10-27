@@ -335,11 +335,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					var maxIndex = 0;
 					//storeInCarts.forEach(function(storeInCart, index, array) {
 					
-	
 					
-					var promise = Parse.Promise.as();
-					promise.then(function() {
-						var promise1 = Parse.Promise.as();
+					var promises = [];
+					
 						for(var i=0 ; i<storeInCarts.length ; i++) {
 							var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
 							console.log("store " + i + " location:" + originParam(locationOfStore));
@@ -347,19 +345,20 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 							var locationOfCustomer = customerInCarts[0].get('location');
 							var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
 							console.log(i + " query:" + url);
-							var promise1 = promise.then(function() {
-								return Parse.Cloud.httpRequest({
+							var httpReqPromise = Parse.Cloud.httpRequest({
 									url : url,
 								}).then(
 									function(directions) {
 										var obj = JSON.parse(directions.text);
+										/*
 										var currentDistance = obj.routes[0].legs[0].distance.value;
 										console.log("currentDistance:" + currentDistance + ",maxDistance:" + maxDistance);
 										if (currentDistance > maxDistance) {
 											maxDistance = currentDistance;
 											maxIndex = i;
 										}
-										promise1.resolve();
+										*/
+										return Parse.Promise.as(obj);
 										/*
 										if(i == storeInCarts.length-1) {
 											console.log("maxIndex:" + maxIndex);	
@@ -372,17 +371,13 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 										console.error('Request failed with response code ' + httpResponse.status);
 									}
 								);
-							});
+							promises.push(httpReqPromise);	
+							
 						}
-						return promise1;
-					}).then(function(){
-						console.log("OK");
-						console.log("maxIndex:" + maxIndex);	
-						console.log("maxDistance:" + maxDistance);
-						console.log("start Promises in Series");
-						response.success("success");
-						
-					});
+						Parse.Promise.when(promises).then(function(results) {
+								console.log(results); 
+								response.success("success");
+						});
 					
 					
 					
