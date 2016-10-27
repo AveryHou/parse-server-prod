@@ -314,7 +314,7 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 					 	success: function() {
 					    	// Push was successful
 					    	console.log("Push was successful send to " + user.id + ", members Of " + storeObj.get("storeName"));
-					    	//response.success(true);
+					    	response.success(true);
 					    },
 					  	error: function(error) {
 					    	console.error(JSON.stringify(error));
@@ -324,19 +324,6 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 					  	useMasterKey: true
 					});
 			    });
-		    }).then(function() {
-		    	console.log("notify store done");
-		    	//計算出較精準的到店取餐時間
-				Parse.Cloud.run("calculateETD", 
-						{cartId: request.object.get("shoppingCart").id}, 
-						{
-                        	success: function (result) {
-                        		response.success(true);
-                    		}, error: function (error) {
-                    			logger.send_error(logger.subject("afterSave HBOrder", "call calculateETD failed."), error);
-								response.error(error);
-                    		}
-                        });
 		    });	
 	    }
 	});

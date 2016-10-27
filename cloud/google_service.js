@@ -335,10 +335,10 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
 						
 						var locationOfCustomer = customerInCarts[0].get('location');
-						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-						console.log(i + " query:" + url);
+						var _url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
+						console.log(i + " query:" + _url);
 						var httpReqPromise = Parse.Cloud.httpRequest({
-								url : url,
+								url : _url,
 							}).then(
 								function(directions) {
 									var obj = JSON.parse(directions.text);
