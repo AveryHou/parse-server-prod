@@ -337,47 +337,58 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 					
 					
 					var promises = [];
-					
-						for(var i=0 ; i<storeInCarts.length ; i++) {
-							var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
-							console.log("store " + i + " location:" + originParam(locationOfStore));
-							
-							var locationOfCustomer = customerInCarts[0].get('location');
-							var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
-							console.log(i + " query:" + url);
-							var httpReqPromise = Parse.Cloud.httpRequest({
-									url : url,
-								}).then(
-									function(directions) {
-										var obj = JSON.parse(directions.text);
-										/*
-										var currentDistance = obj.routes[0].legs[0].distance.value;
-										console.log("currentDistance:" + currentDistance + ",maxDistance:" + maxDistance);
-										if (currentDistance > maxDistance) {
-											maxDistance = currentDistance;
-											maxIndex = i;
-										}
-										*/
-										return Parse.Promise.as(obj);
-										/*
-										if(i == storeInCarts.length-1) {
-											console.log("maxIndex:" + maxIndex);	
-											console.log("maxDistance:" + maxDistance);
-											console.log("start Promises in Series");
-										}
-										*/
-									},
-									function(httpResponse) {
-										console.error('Request failed with response code ' + httpResponse.status);
+					for(var i=0 ; i<storeInCarts.length ; i++) {
+						var locationOfStore = storeInCarts[i].get("store").get("geoLocation");
+						console.log("store " + i + " location:" + originParam(locationOfStore));
+						
+						var locationOfCustomer = customerInCarts[0].get('location');
+						var url = createHttpUrl([originParam(locationOfStore), destinationParam(locationOfCustomer)]);
+						console.log(i + " query:" + url);
+						var httpReqPromise = Parse.Cloud.httpRequest({
+								url : url,
+							}).then(
+								function(directions) {
+									var obj = JSON.parse(directions.text);
+									/*
+									var currentDistance = obj.routes[0].legs[0].distance.value;
+									console.log("currentDistance:" + currentDistance + ",maxDistance:" + maxDistance);
+									if (currentDistance > maxDistance) {
+										maxDistance = currentDistance;
+										maxIndex = i;
 									}
-								);
-							promises.push(httpReqPromise);	
-							
+									*/
+									return Parse.Promise.as(obj);
+									/*
+									if(i == storeInCarts.length-1) {
+										console.log("maxIndex:" + maxIndex);	
+										console.log("maxDistance:" + maxDistance);
+										console.log("start Promises in Series");
+									}
+									*/
+								},
+								function(httpResponse) {
+									console.error('Request failed with response code ' + httpResponse.status);
+								}
+							);
+						promises.push(httpReqPromise);	
+						
+					}
+					Parse.Promise.when(promises).then(function(results) {
+						var maxDistance = 0;
+						var maxIndex = 0;
+						for(var i=0 ; i<results.length ; i++) {
+							var obj = results[i];
+							var currentDistance = obj.routes[0].legs[0].distance.value;
+							console.log("currentDistance:" + currentDistance + ",maxDistance:" + maxDistance);
+							if (currentDistance > maxDistance) {
+								maxDistance = currentDistance;
+								maxIndex = i;
+							}
 						}
-						Parse.Promise.when(promises).then(function(results) {
-								console.log(results); 
-								response.success("success");
-						});
+						console.log("maxIndex:" + maxIndex);	
+						console.log("maxDistance:" + maxDistance);
+						response.success("success");
+					});
 					
 					
 					
