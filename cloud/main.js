@@ -1513,7 +1513,7 @@ Parse.Cloud.define("getMyOrder", function(request, response) {
 	
 	var query = new Parse.Query("HBShoppingCart");
 	query.containedIn("status", request.params.status);
-	if(userId) {
+	if(request.params.userId) {
 		query.equalTo("owner", request.params.userId);
 	} else {
 		query.equalTo("owner", request.user);
