@@ -1513,7 +1513,11 @@ Parse.Cloud.define("getMyOrder", function(request, response) {
 	
 	var query = new Parse.Query("HBShoppingCart");
 	query.containedIn("status", request.params.status);
-	query.equalTo("owner", request.user);
+	if(userId) {
+		query.equalTo("owner", request.params.userId);
+	} else {
+		query.equalTo("owner", request.user);
+	}
 	query.include("sendTo");
 	query.include("owner");
 	query.include("bee");
@@ -1533,7 +1537,8 @@ Parse.Cloud.define("getMyOrder", function(request, response) {
 Parse.Cloud.define("getMyCompleteOrder", function(request, response) {
 	Parse.Cloud.run("getMyOrder", 
 		{
-		 	status: request.params.status
+		 	status: request.params.status,
+		 	userId: request.user.id
 		 }, 
 		 {
 			success: function(result){
