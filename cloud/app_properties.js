@@ -28,7 +28,8 @@ exports.order_url = function() {
 }
 
 exports.shorten_url = function() {
-	return "http://hungrybeedev.parseapp.com";
+	//return "http://hungrybeedev.parseapp.com";
+	return "https://hungrybeedev.herokuapp.com/public";
 }
 
 exports.order_info = function() {
