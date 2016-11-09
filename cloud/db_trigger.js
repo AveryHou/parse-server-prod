@@ -460,33 +460,37 @@ Parse.Cloud.afterSave("HBStoreInCart", function(request) {
 Parse.Cloud.afterSave(Parse.User, function(request) {
 	console.log("login count:" + request.object.get("loginCount"));
 	if(request.object.get("loginCount") == 1) { //第一次登入
-		var query = new Parse.Query("HBCoupon");
-		query.equalTo("owner", request.object);
-		query.equalTo("remark", "first login");
-		query.find().then(
-	  		function(couponFound) {
-	  			if (couponFound.length == 0) { //沒給過coupon
-					Parse.Cloud.useMasterKey();
-					var HBCoupon = Parse.Object.extend("HBCoupon");
-					var coupon = new HBCoupon();
-					coupon.set("owner", request.object);
-					coupon.set("discount", -50);
-					coupon.set("remark", "first login");
-					coupon.save(null,{
-						success: function(couponCreated){
-							console.log("coupon created");
-						},
-						error: function(err) {
-							mail.send_error(mail.subject("afterSave User", "create coupon"), err); 
-						}		
-					});
-	    		} else { //
-	    			console.log("not first time login");
-	    		}
-	  		},
-	  		function(err) {
-	  			mail.send_error(mail.subject("afterSave User", "find coupon"), err);
-			}
-  		);
+		if(request.object.getUsername().indexOf("driver-") != -1 || request.object.getUsername().indexOf("store-") != -1 ) {
+			//小蜜蜂及店家不用給優惠券
+		} else {
+			var query = new Parse.Query("HBCoupon");
+			query.equalTo("owner", request.object);
+			query.equalTo("remark", "first login");
+			query.find().then(
+		  		function(couponFound) {
+		  			if (couponFound.length == 0) { //沒給過coupon
+						Parse.Cloud.useMasterKey();
+						var HBCoupon = Parse.Object.extend("HBCoupon");
+						var coupon = new HBCoupon();
+						coupon.set("owner", request.object);
+						coupon.set("discount", -50);
+						coupon.set("remark", "first login");
+						coupon.save(null,{
+							success: function(couponCreated){
+								console.log("coupon created");
+							},
+							error: function(err) {
+								mail.send_error(mail.subject("afterSave User", "create coupon"), err); 
+							}		
+						});
+		    		} else { //
+		    			console.log("not first time login");
+		    		}
+		  		},
+		  		function(err) {
+		  			mail.send_error(mail.subject("afterSave User", "find coupon"), err);
+				}
+	  		);
+	  	}
   	}	
 });
