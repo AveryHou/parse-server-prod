@@ -23,13 +23,11 @@ exports.error_admin = function() {
 }
 
 exports.order_url = function() {
-	//return "http://coderer.net/hungrybee/index.php";
 	return "http://hungrybee.net/hungrybee/index.php";
 }
 
 exports.shorten_url = function() {
-	//return "http://hungrybeedev.parseapp.com";
-	return "https://hungrybeedev.herokuapp.com/public";
+	return "https://hungrybeedev.herokuapp.com/public"; //Heroku
 }
 
 exports.order_info = function() {
@@ -55,8 +53,8 @@ exports.kotsms_pwd = function() {
 	return "hungrybee999";
 }
 exports.kotsms_url = function() {
-	return "http://202.39.48.216/kotsmsapi-1.php";
-	//return "https://api.kotsms.com.tw/kotsmsapi-1.php";
+	//return "http://202.39.48.216/kotsmsapi-1.php";
+	return "http://api.kotsms.com.tw/kotsmsapi-1.php";
 }
 exports.kotsms_mailer = function() {
 	return "mail2sms@kotsms.com.tw";
@@ -68,10 +66,8 @@ exports.kotsms_mailer = function() {
 // Mailgun can send up to 12,000 mails/month for free.
 ////////////////////////////////////////////////////
 
-//var mailgun_domain = "hungrybee.net";
-//var mailgun_key = "key-f43e26f64176e2545eb358dd39066bf9";
-var mailgun_domain = "mg.wintopinfo.com";
-var mailgun_key = "key-ada9303e5d3b184d2e601674d53b1e3b";
+var mailgun_domain = "hungrybee.club";
+var mailgun_key = "key-f43e26f64176e2545eb358dd39066bf9";
 
 exports.mailgun_domain = function() {
 	return mailgun_domain;

@@ -296,15 +296,9 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 						url : url,
 						success : function(directions) {
 							var obj = JSON.parse(directions.text);
-							//console.log("obj:" + JSON.stringify(obj));
-							
 							var leg = directions.data['routes'][0]['legs'][0];
 							var duration = parseInt(leg['duration']['value']);
-							
-							console.log("duration:" + duration);
 							var duration2 = obj.routes[0].legs[0].duration.value;
-							console.log("duration2:" + duration2);
-							
 							var interval = parseInt(duration / (5 * 60)) + 2;
 							var etd = new Date(eta.getTime() - interval * 5 * 60 * 1000);
 							storeInCarts[0].set('ETD', etd);
@@ -425,10 +419,23 @@ Parse.Cloud.define("calculateETD", function(request, response) {
 				} //~else
 
 			});
-
 		},
 		error : function(error) {
 			response.error(error);
 		}
 	});
+});
+
+Parse.Cloud.define("findWeather", function(request, response) {
+	
+	Parse.Cloud.httpRequest({
+		url: 'http://opendata.cwb.gov.tw/govdownload?dataid=O-A0001-001&authorizationkey=rdec-key-123-45678-011121314',
+  		success: function(httpResponse) {
+        	response.success(httpResponse);
+        },
+        error: function(httpResponse) {
+            console.error('Request failed with response code ' + httpResponse.status);
+            response.error('Request failed with response code ' + httpResponse.status);
+        }
+    });
 });

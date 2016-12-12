@@ -51,6 +51,7 @@ exports.send_info = function (mailTo, mailCc, subject, body, orderId) {
 var mailGunService = require('mailgun-js')({apiKey: prop.mailgun_key(), domain: prop.mailgun_domain()});
 
 function send(mailto, mailCc, subject, body) {
+	console.log("domain:" + prop.mailgun_domain());
 	console.log("mailto:" + mailto);
 	console.log("subject:" + "[" + prop.env() + "]"+ subject);
 	console.log("body:" + body);

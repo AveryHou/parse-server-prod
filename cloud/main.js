@@ -1761,27 +1761,51 @@ Parse.Cloud.define("bidOnOrder", function(request, response) {
 	     				cartUpdated.save();
 	     				console.log("main.js save status to ongoing");
 	     				
-	     				//update user's delivering state
-						var queryUser = new Parse.Query(Parse.User);
-						queryUser.equalTo('username', request.user.getUsername());	
-						queryUser.first().then(
-							function(userFound) {
-								if (userFound) {
-									userFound.set("delivering", true);
-									userFound.save();
-									logger.send_notify(prop.mail_cc(), "", "[搶標成功]" + request.user.getUsername() + " " + request.user.get("contact"), "訂單:" + cartUpdated.id);
-						
-									response.success("Yes");	
-								} else {
-									logger.send_error(logger.subject("bidOnOrder", "driver not found."), err);
-									response.error("driver not found");
-								}
-							}, 
-							function (err) {
-								logger.send_error(logger.subject("bidOnOrder", "get user error."), err);
-								response.error(JSON.stringify(err));
-							}
-						);
+	     				//update hborder
+	     				var queryOrder = new Parse.Query("HBOrder");
+						queryOrder.equalTo("shoppingCart", cartUpdated);
+	     				queryOrder.find({
+					    	success: function(results) {
+					    		if(results.length > 0) {
+					    			var currentOrder = results[0];
+					    			currentOrder.set("status", "notify store");
+					    			currentOrder.save(null,{
+										success: function(currentOrderUpdated){
+											//update user's delivering state
+											var queryUser = new Parse.Query(Parse.User);
+											queryUser.equalTo('username', request.user.getUsername());	
+											queryUser.first().then(
+												function(userFound) {
+													if (userFound) {
+														userFound.set("delivering", true);
+														userFound.save();
+														logger.send_notify(prop.mail_cc(), "", "[搶標成功]" + request.user.getUsername() + " " + request.user.get("contact"), "訂單:" + cartUpdated.id);
+											
+														response.success("Yes");	
+													} else {
+														logger.send_error(logger.subject("bidOnOrder", "driver not found."), err);
+														response.error("driver not found");
+													}
+												}, 
+												function (err) {
+													logger.send_error(logger.subject("bidOnOrder", "get user error."), err);
+													response.error(JSON.stringify(err));
+												}
+											);
+									    },
+										error: function(err) {
+											logger.send_error(logger.subject("createShoppingCart", "save new cart"), err); 
+											response.error(err);
+										}		
+									});
+					    			
+					    		}
+					    	},
+					    	error: function(err) {
+								logger.send_error(mail.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
+					      	  	response.error(err);
+					    	}
+					  	});
 	     			} else {
 	     				logger.send_notify(prop.mail_cc(), "", "[搶標失敗]" + request.user.getUsername() + " " + request.user.get("contact"), "訂單:" + cartUpdated.id);
 						response.success("Too Late");

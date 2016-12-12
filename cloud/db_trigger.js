@@ -162,32 +162,29 @@ Parse.Cloud.afterSave("HBShoppingCart", function(request, response) {
 				//	console.log("立即推播:" + pushSent);
 				//}
 				
-				//if(request.object.dirty("status")) { // if status changed
-					console.log("status changed");
-					//send push to bees
-					Parse.Push.send({
-						channels: [ "bee" ],
-						push_time: pushSent,
-					  	data: {
-						  	title: "外送小蜜蜂",
-						  	alert: prop.push_env() + "HungryBee 有一筆新訂單，訂單編號:" + request.object.id + "。產生時間:" + formattedTime,
-						    sound: "default",
-							badge: "Increment",
-							cartId: request.object.id
-					  	},
-					},
-					{
-					 	success: function() {
-					    	// Push was successful
-					    	console.log("Push was successful");
-					    },
-					  	error: function(error) {
-					    	console.error(JSON.stringify(error));
-					    	mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
-					  	},
-					  	useMasterKey: true
-					});
-				//}
+				//send push to bees
+				Parse.Push.send({
+					channels: [ "bee" ],
+					push_time: pushSent,
+				  	data: {
+					  	title: "外送小蜜蜂",
+					  	alert: prop.push_env() + "HungryBee 有一筆新訂單，訂單編號:" + request.object.id + "。產生時間:" + formattedTime,
+					    sound: "default",
+						badge: "Increment",
+						cartId: request.object.id
+				  	},
+				},
+				{
+				 	success: function() {
+				    	// Push was successful
+				    	console.log("Push was successful");
+				    },
+				  	error: function(error) {
+				    	console.error(JSON.stringify(error));
+				    	mail.send_error(mail.subject("afterSave HBShoppingCart", "send push failed"), error);
+				  	},
+				  	useMasterKey: true
+				});
 	    	},
 	    	error: function(err) {
 				mail.send_error(mail.subject("afterSave HBShoppingCart", "get HBCoupon") , err);
@@ -286,7 +283,7 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 		var storeObj = storeInCart.get("store");
 	    var cartObj = storeInCart.get("cart");
 	    console.log("store:" + storeObj.get("storeName") + ", cart status:" + cartObj.get("status"));
-	    if(cartObj.get("status") == "onbid" || cartObj.get("status") == "ongoing") { 
+	    if(cartObj.get("status") == "ongoing") { //接單後才通知店家
 	    	var promise = Parse.Promise.as();
 		    promise = promise.then(function() {
 		        var queryUser = new Parse.Query(Parse.User);
@@ -314,7 +311,7 @@ Parse.Cloud.afterSave("HBOrder", function(request) {
 					 	success: function() {
 					    	// Push was successful
 					    	console.log("Push was successful send to " + user.id + ", members Of " + storeObj.get("storeName"));
-					    	response.success(true);
+					    	//response.success(true);
 					    },
 					  	error: function(error) {
 					    	console.error(JSON.stringify(error));
@@ -367,7 +364,7 @@ Parse.Cloud.afterSave("HBRushHour", function(request) {
 						console.log(request.object.get("storeId").id + " store saved:");
 					},
 					error: function(err) {
-						mail.send_error(mail.subject("afterSave HBRushHour", "set store onhold failed."), err);
+						mail.send_error(mail.subject("afterSave HBRushHour", "set store onhold failed."), err); 
 					}		
 				});
 		 	},
