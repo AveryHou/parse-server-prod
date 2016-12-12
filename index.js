@@ -45,9 +45,9 @@ var api = new ParseServer({
 var api = new ParseServer({
   databaseURI: databaseUri || 'mongodb://heroku:hb6230127@ds035676-a0.mlab.com:35676,ds035676-a1.mlab.com:35676/hungrybeedb?replicaSet=rs-ds035676',
   cloud: process.env.CLOUD_CODE_MAIN || __dirname + '/cloud/main.js',
-  appId: process.env.APP_ID || 'oVYLOizsuLXxCRucXmrgWF6q0OjlXc9d1fXfBDmU',
-  masterKey: process.env.MASTER_KEY || 'IdnvI0MJAOVh2m96HVyzprD1mieHYUH2viIoSDaw', //Add your master key here. Keep it secret!
-  serverURL: process.env.SERVER_URL || 'http://hungrybeedev.herokuapp.com/parse',  // Don't forget to change to https if needed
+  appId: process.env.APP_ID || '9O3uQHctMnz86F6m3lifIlwKrMGONwlUjO2OL4uf',
+  masterKey: process.env.MASTER_KEY || 'gevC48VkzGHGrWrRJpz8Dt7SRl4BdJ0ycszsQX9k', //Add your master key here. Keep it secret!
+  serverURL: process.env.SERVER_URL || 'http://hungrybeeprod.herokuapp.com/parse',  // Don't forget to change to https if needed
   fileKey: "25d04708-179e-4e34-b4da-85a058093cfc",
   push: {
   	  android: {
@@ -56,14 +56,14 @@ var api = new ParseServer({
       },
       ios: [
 	      {
-	        pfx: __dirname + '/push-key/HBDriver-Dev-Certificate.p12',
+	        pfx: __dirname + '/push-key/HungryBeeDriver-Prod-20171207.p12',
 	        bundleId: 'net.hungrybee.HungryBeeDriver',
-	        production: false
+	        production: true
 	      },
 	      {
-	        pfx: __dirname + '/push-key/HB-Dev-Certificate.p12',
+	        pfx: __dirname + '/push-key/HungryBee-Certificates.p12',
 	        bundleId: 'net.hungrybee.HungryBee',
-	        production: false
+	        production: true
 	      }
 	    ]
     },
