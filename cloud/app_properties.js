@@ -1,25 +1,25 @@
 
 exports.env = function() {
-	return "Dev";	
+	return "Prod";	
 }
 exports.push_env = function() {
-	return "[Dev]";	
+	return "";	
 }
  
 exports.booking_manager = function () {
-	return "avery_hou@hungrybee.net";
+	return 	"emma_wang@hungrybee.net";
 }
 
 exports.mail_cc = function () {
-	return "avery_hou@hungrybee.net";
+	return "info@hungrybee.net";
 }
 
 exports.admin_mail = function() {
-	return "app@hungrybee.net";
+	return "order@hungrybee.net";
 }
 
 exports.error_admin = function() {
-	return "app@hungrybee.net";
+	return "avery_hou@hungrybee.net";
 }
 
 exports.order_url = function() {
