@@ -27,7 +27,7 @@ exports.order_url = function() {
 }
 
 exports.shorten_url = function() {
-	return "https://hungrybeedev.herokuapp.com/public"; //Heroku
+	return "https://hungrybeeprod.herokuapp.com/public"; //Heroku
 }
 
 exports.order_info = function() {
