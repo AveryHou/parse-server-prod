@@ -61,7 +61,7 @@ var api = new ParseServer({
 	        production: true
 	      },
 	      {
-	        pfx: __dirname + '/push-key/HungryBee-Certificates.p12',
+	        pfx: __dirname + '/push-key/HungryBeeProd-20161218-Certificates.p12',
 	        bundleId: 'net.hungrybee.HungryBee',
 	        production: true
 	      }
