@@ -51,8 +51,8 @@ var api = new ParseServer({
   fileKey: "25d04708-179e-4e34-b4da-85a058093cfc",
   push: {
   	  android: {
-        senderId: '443526581493',
-        apiKey: 'AIzaSyAOC2vryr8Bfu27LaG3RaZ7WeFBd5JPhx0'
+        senderId: '639572456535',
+        apiKey: 'AIzaSyD4sU7lQqqbcXx9UZ-HprKmJ3LIGXwSSwI'
       },
       ios: [
 	      {
