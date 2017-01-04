@@ -1,21 +1,21 @@
 
 exports.env = function() {
-	return "Prod";	
+	return "Heroku";	
 }
 exports.push_env = function() {
 	return "";	
 }
  
 exports.booking_manager = function () {
-	return 	"emma_wang@hungrybee.net";
+	return 	"app@hungrybee.net";
 }
 
 exports.mail_cc = function () {
-	return "info@hungrybee.net";
+	return "app@hungrybee.net";
 }
 
 exports.admin_mail = function() {
-	return "order@hungrybee.net";
+	return "app@hungrybee.net";
 }
 
 exports.error_admin = function() {

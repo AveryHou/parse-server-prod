@@ -3473,6 +3473,7 @@ Parse.Cloud.define("customerDidSignOff", function(request, response) {
 							queryUser.equalTo('username', request.user.getUsername());	
 							queryUser.first()
 								.then(function(userFound) {
+									Parse.Cloud.useMasterKey();
 									userFound.set("delivering", false);
 									return userFound.save();
 								})
