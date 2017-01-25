@@ -306,6 +306,7 @@ Parse.Cloud.job("getBookingUser", function(req, status) {
 				}
 			}
 			
+			Parse.Cloud.useMasterKey();
 			var query1 = new Parse.Query(Parse.Installation);
 			query1.containedIn("installationId", bookingsNeedVerify);
 			query1.find({
